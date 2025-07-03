@@ -34,3 +34,11 @@ compose.desktop {
         }
     }
 }
+
+// fix Run Error: Inconsistent JVM-target compatibility detected for tasks 'compileJava' (23) and 'compileKotlin' (22).
+java.setTargetCompatibility(22)
+kotlin {
+    compilerOptions {
+        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_22
+    }
+}
