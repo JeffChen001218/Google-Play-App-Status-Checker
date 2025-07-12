@@ -5,19 +5,28 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
-import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.withLock
 import repo.Repo.add
 import repo.Repo.appStatusList
 import repo.Repo.delete
 import repo.Repo.mutex
+import repo.Repo.update
 
 @Composable
 @Preview
 fun App() {
 
     val appStatusList by appStatusList.state
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            mutex.withLock { appStatusList.toList() }.forEach { appStatus ->
+                appStatus.startCheck()
+            }
+            delay(60 * 1000L)
+        }
+    }
 
     MaterialTheme {
         PackageListComponent(
@@ -29,20 +38,9 @@ fun App() {
                 delete(appStatus)
             },
             onToggleCheck = { appStatus ->
-                add(appStatus.copy().apply { isChecked = !isChecked })
+                update(appStatus.copy().apply { enableCheck = !enableCheck })
             },
         )
-    }
-
-    LaunchedEffect(Unit) {
-        while (true) {
-            mutex.withLock {
-                appStatusList.forEach { appStatus ->
-                    async { appStatus.checkOnline() }
-                }
-            }
-            delay(10 * 1000L)
-        }
     }
 
 }

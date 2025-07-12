@@ -4,14 +4,21 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import component.AutoSizeText
 import model.AppStatus
+import model.AppStatus.Status
 import kotlin.math.max
 
 @Composable
@@ -70,26 +77,113 @@ fun PackageRow(
 ) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(appStatus.name, modifier = Modifier.weight(1f))
+        AutoSizeText(
+            appStatus.name,
+            maxTextSize = 14.sp, color = Color.Black, fontWeight = FontWeight.Bold,
+            maxLines = 1, alignment = Alignment.Center,
+            modifier = Modifier.weight(2f)
+        )
+        AutoSizeText(
+            appStatus.code,
+            maxTextSize = 14.sp, color = Color.Black, fontWeight = FontWeight.Bold,
+            maxLines = 1, alignment = Alignment.Center,
+            modifier = Modifier.weight(1f)
+        )
+        AutoSizeText(
+            appStatus.packageName,
+            maxTextSize = 14.sp, color = Color.Black,
+            maxLines = 1, alignment = Alignment.Center,
+            modifier = Modifier.weight(5f)
+        )
 
-        Text(appStatus.onlineVersion ?: "Unknown", modifier = Modifier.padding(horizontal = 8.dp))
-
-        if (!appStatus.onlineVersion.isNullOrBlank()) {
-            Icon(Icons.Default.Check, contentDescription = "Checked", tint = Color.Green)
-        } else {
-            Icon(Icons.Default.Warning, contentDescription = "Unchecked", tint = Color.Gray)
+        Column(
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.weight(2f)
+        ) {
+            AutoSizeText(
+                appStatus.theLastOnlineVersion ?: (if (appStatus.isOffline()) "--" else "Unknown"),
+                maxTextSize = 14.sp, color = Color.Black,
+                maxLines = 1, alignment = Alignment.Center,
+                style = TextStyle(
+                    textDecoration = if (appStatus.isOffline() && !appStatus.theLastOnlineVersion.isNullOrEmpty()) TextDecoration.LineThrough
+                    else null
+                ),
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(Modifier.height(8.dp))
+            AutoSizeText(
+                "当前版本",
+                maxTextSize = 14.sp, color = Color.Black,
+                maxLines = 1, alignment = Alignment.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
         }
 
+        Column(
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.weight(2f)
+        ) {
+            when (appStatus.status) {
+                Status.Checking -> {
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = "正在检查",
+                        modifier = Modifier.size(24.dp),
+                        tint = Color.Green.copy(alpha = 0.5f)
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text("正在检查")
+                }
+
+                Status.Online -> {
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = "在线",
+                        modifier = Modifier.size(24.dp),
+                        tint = Color.Green.copy(alpha = 0.5f)
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text("在线")
+                }
+
+                Status.Offline -> {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "已离线",
+                        modifier = Modifier.size(24.dp),
+                        tint = Color.Red
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text("已离线")
+                }
+
+                else -> {
+                    Icon(
+                        imageVector = Icons.Default.Warning,
+                        contentDescription = "检查失败",
+                        modifier = Modifier.size(24.dp),
+                        tint = Color.Gray
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(if (appStatus.lastCheckTime != 0L) "检查失败" else "")
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.width(12.dp))
+
         Switch(
-            checked = appStatus.isChecked,
+            checked = appStatus.enableCheck,
             onCheckedChange = {
                 onToggleCheck()
             }
         )
 
-        Spacer(modifier = Modifier.width(8.dp))
+        Spacer(modifier = Modifier.width(12.dp))
 
         Button(onClick = onDelete) {
             Text("删除")
@@ -127,7 +221,7 @@ fun AddDialog(
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("名称") },
+                    label = { Text("App名称") },
                     singleLine = true
                 )
                 OutlinedTextField(value = id, onValueChange = { id = it }, label = { Text("编号") }, singleLine = true)

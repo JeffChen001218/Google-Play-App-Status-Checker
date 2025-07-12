@@ -43,6 +43,12 @@ dependencies {
     implementation("io.ktor:ktor-client-content-negotiation:3.2.1")
     implementation("io.ktor:ktor-serialization-kotlinx-json:3.2.1")
     implementation("io.ktor:ktor-client-cio:3.2.1")
+
+    // material icon
+//    implementation("androidx.compose.material:material-icons-extended:1.7.8")
+
+    // gson
+    implementation("com.google.code.gson:gson:2.13.1")
 }
 
 compose.desktop {

@@ -12,7 +12,7 @@ object CoroutineTool {
         SupervisorJob()
                 + CoroutineExceptionHandler { coroutineContext, throwable ->
             // throw if is debugging
-            println("CoroutineExceptionHandler ${coroutineContext[CoroutineExceptionHandler]} $throwable")
+            println("CoroutineExceptionHandler ${coroutineContext[CoroutineExceptionHandler]} ${throwable.message}")
         })
 
     fun launchScope(context: CoroutineContext = Dispatchers.Swing, block: suspend CoroutineScope.() -> Unit): Job {

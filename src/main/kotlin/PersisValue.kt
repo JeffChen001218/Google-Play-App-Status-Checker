@@ -1,27 +1,34 @@
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
+import com.google.gson.Gson
 import com.russhwolf.settings.Settings
-import com.russhwolf.settings.serialization.decodeValue
-import com.russhwolf.settings.serialization.encodeValue
-import kotlinx.serialization.builtins.ByteArraySerializer
+import kotlinx.serialization.KSerializer
+import kotlinx.serialization.json.Json
 import tool.CoroutineTool.launchScope
 import java.io.*
 import kotlin.properties.ReadWriteProperty
 import kotlin.reflect.KProperty
 
-class PersisValue<T>(private val key: String, private val defaultValue: T) :
+abstract class PersisValue<T>(
+    private val key: String,
+    private val defaultValue: T,
+    private val serializer: KSerializer<T>? = null
+) :
     ReadWriteProperty<Any?, T> {
 
     companion object {
         private val settings by lazy { Settings() }
+        private val gson by lazy { Gson() }
+        private val json by lazy { Json { ignoreUnknownKeys = true } }
 
-        fun bool(key: String, defaultValue: Boolean = false) = PersisValue<Boolean>(key, defaultValue)
-        fun long(key: String, defaultValue: Long = 0L) = PersisValue<Long>(key, defaultValue)
-        fun int(key: String, defaultValue: Int = 0) = PersisValue<Int>(key, defaultValue)
-        fun string(key: String, defaultValue: String = "") = PersisValue<String>(key, defaultValue)
-        fun float(key: String, defaultValue: Float = 0f) = PersisValue<Float>(key, defaultValue)
-        fun double(key: String, defaultValue: Double = 0.0) = PersisValue<Double>(key, defaultValue)
-        fun <T> create(key: String, defaultValue: T) = PersisValue<T>(key, defaultValue)
+        fun bool(key: String, defaultValue: Boolean = false) = object : PersisValue<Boolean>(key, defaultValue) {}
+        fun long(key: String, defaultValue: Long = 0L) = object : PersisValue<Long>(key, defaultValue) {}
+        fun int(key: String, defaultValue: Int = 0) = object : PersisValue<Int>(key, defaultValue) {}
+        fun string(key: String, defaultValue: String = "") = object : PersisValue<String>(key, defaultValue) {}
+        fun float(key: String, defaultValue: Float = 0f) = object : PersisValue<Float>(key, defaultValue) {}
+        fun double(key: String, defaultValue: Double = 0.0) = object : PersisValue<Double>(key, defaultValue) {}
+        fun <T> create(key: String, defaultValue: T, serializer: KSerializer<T>) =
+            object : PersisValue<T>(key, defaultValue, serializer) {}
     }
 
     private fun saveData(key: String, value: T) {
@@ -32,11 +39,7 @@ class PersisValue<T>(private val key: String, private val defaultValue: T) :
             is Float -> settings.putFloat(key, value)
             is Boolean -> settings.putBoolean(key, value)
             is Double -> settings.putDouble(key, value)
-            is Serializable -> settings.encodeValue(
-                ByteArraySerializer(),
-                key,
-                value.serializeToBytes()
-            )
+            is Serializable -> settings.putString(key, json.encodeToString(serializer!!, value))
 
             else -> throw IllegalArgumentException("Unsupported type")
         }
@@ -53,9 +56,9 @@ class PersisValue<T>(private val key: String, private val defaultValue: T) :
             is Float -> settings.getFloat(key, defaultValue)
             is Boolean -> settings.getBoolean(key, defaultValue)
             is Double -> settings.getDouble(key, defaultValue)
-            is Serializable -> settings.decodeValue(
-                ByteArraySerializer(), key, defaultValue.serializeToBytes()
-            ).deserialization<T>()
+            is Serializable -> settings.getString(key, json.encodeToString(serializer!!, defaultValue)).let {
+                json.decodeFromString(serializer!!, it)
+            }
 
             else -> throw IllegalArgumentException("Unsupported type")
         } as? T) ?: defaultValue

@@ -1,21 +1,20 @@
 package tool
 
 import PersisValue
-import io.ktor.http.cio.*
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.engine.*
-import io.ktor.client.engine.ProxyBuilder.http
+import io.ktor.client.engine.cio.*
+import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
-import io.ktor.client.engine.cio.* // Android/Desktop 可用
-import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.http.*
+import io.ktor.http.cio.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.*
 import kotlinx.serialization.*
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.*
 
 object CheckStatusTool {
@@ -45,9 +44,10 @@ object CheckStatusTool {
         packageName: String,
         retryTimes: Int = 2
     ): String? = withContext(Dispatchers.IO) {
-            val response =fetchPlainText("https://play.google.com/store/apps/details?id=${packageName}&hl=en")
+        runCatching {
+            val response = fetchPlainText("https://play.google.com/store/apps/details?id=${packageName}&hl=en")
+            val html = response.bodyAsText()
             if (response.status.isSuccess()) {
-                val html = response.bodyAsText() ?: return@withContext getOnlineVersionName(packageName, retryTimes - 1)
                 """<script.*${packageName}.*(\["[0-9]+\.[0-9]+(\.[0-9]+)?"\]).*</script>""".toRegex()
                     .find(html)?.value?.let {
                         """\["[0-9]+\.[0-9]+(\.[0-9]+)?"\]""".toRegex().find(it)?.value
@@ -57,17 +57,26 @@ object CheckStatusTool {
                     ?.replace("\"", "")
                     ?.takeIf { it.isNotBlank() } ?: ""
             } else {
+                if (html.contains("We're sorry, the requested URL was not found on this server.")) {
+                    return@withContext null
+                }
                 // fetch failed
                 if (retryTimes > 0) {
                     // retry
                     getOnlineVersionName(packageName, retryTimes - 1)
                 } else null
             }
+        }.getOrNull() ?: ""
     }
 
-    private var releasedVersionNameList by PersisValue.create("released_version_name_list", listOf<String>())
+    private var releasedVersionNameList by PersisValue.create(
+        "released_version_name_list",
+        listOf(),
+        ListSerializer(String.serializer())
+    )
+
     suspend fun isAppReleased(
-        packageName: String ,
+        packageName: String,
         versionName: String,
         retryTimes: Int = 2
     ): Boolean? {
