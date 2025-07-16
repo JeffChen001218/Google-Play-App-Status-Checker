@@ -57,8 +57,13 @@ compose.desktop {
 
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
-            packageName = "demo"
+            packageName = "GP Checker"
             packageVersion = "1.0.0"
+
+            macOS{
+                dockName = "GP Checker"
+                iconFile.set(project.file("src/main/resources/icon.png"))
+            }
         }
     }
 }

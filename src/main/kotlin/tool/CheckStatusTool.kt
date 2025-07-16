@@ -16,14 +16,14 @@ import kotlinx.serialization.*
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.*
+import repo.Repo
 
 object CheckStatusTool {
 
     // 初始化客户端
     val client = HttpClient(CIO) {
         engine {
-            // TODO 通过UI设置
-            proxy = ProxyBuilder.http("http://127.0.0.1:7890")
+            proxy = ProxyBuilder.http("http://${Repo.host.value}:${Repo.port.value}")
         }
         install(ContentNegotiation) {
             json(Json { ignoreUnknownKeys = true })

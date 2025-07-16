@@ -38,8 +38,14 @@ data class AppStatus constructor(
     fun update() = Repo.update(this)
     fun delete() = Repo.delete(this)
 
+    fun reset() {
+        onlineVersion = ""
+        println("add-3")
+        add()
+    }
 
     private var checking by mutableStateOf(false)
+
     val status: Status by derivedStateOf {
         when {
             checking -> Status.Checking
@@ -51,11 +57,11 @@ data class AppStatus constructor(
 
 
     private var checkJob: Job? = null
-    fun startCheck() {
+    fun startCheck(bypassTimeLimit: Boolean = false) {
         launchScope {
             if (isChecking()) return@launchScope
-            checkJob?.cancelAndJoin()
-            if (canCheck()) {
+            if (canCheck(bypassTimeLimit)) {
+                checkJob?.cancelAndJoin()
                 checkJob = launch {
                     async {
                         checking = true
@@ -65,7 +71,8 @@ data class AppStatus constructor(
                             }
                         }
                         checking = false
-                        update()
+                        println("add-2")
+                        add()
                     }
                 }
             }
@@ -82,7 +89,7 @@ data class AppStatus constructor(
     fun isOnline(): Boolean = !onlineVersion.isNullOrBlank()
 
 
-    fun canCheck() = enableCheck
-            && !isOffline()
-            && System.currentTimeMillis() - lastCheckTime > checkIntervalMinutes * 60 * 1000
+    fun canCheck(bypassTimeLimit: Boolean = false) = enableCheck
+            // && !isOffline()
+            && (bypassTimeLimit || System.currentTimeMillis() - lastCheckTime > checkIntervalMinutes * 60 * 1000)
 }
