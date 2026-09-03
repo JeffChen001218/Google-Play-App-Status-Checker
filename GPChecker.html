@@ -273,6 +273,11 @@
       // [[["版本名"]],[[[目标 SDK]],[[[最低 SDK,"最低 Android 版本"]]]]]
       // 该结构与用户评论中的版本号无关，避免将评论版本误判为在线版本。
       const PLAY_DETAILS_VERSION_PATTERN = /\[\[\[\s*["']([^"']{1,80})["']\s*\]\]\s*,\s*\[\[\[\s*\d+\s*\]\]\s*,\s*\[\[\[\s*\d+\s*,\s*["'][^"']{1,40}["']\s*\]\]\s*\]\]/;
+      // Google Play 的详情回调会将展示日期与精确时间并列：
+      // [["Sep 1, 2026",[1788266879,711000000]]]
+      // 后一组为 Unix seconds / nanoseconds。外层字段编号会随应用与页面版本变化，
+      // 因此不依赖 CKZelvynis 页面中偶然出现的 "146"，而是以 Updated on 的同一日期关联数据对。
+      const PLAY_UPDATED_TIMESTAMP_PATTERN = /["']([A-Z][a-z]{2}\s+\d{1,2},\s+\d{4})["']\s*,\s*\[\s*(\d{10,})\s*,\s*(\d{1,9})\s*\]/g;
       const UPDATED_ON_PATTERNS = [
         /(?:^|>)\s*Updated\s+on\s*(?:<[^>]+>\s*)+([A-Z][a-z]{2}\s+\d{1,2},\s+\d{4})(?:\s*<|$)/i,
         /["']Updated on["'][\s\S]{0,160}?["']([A-Z][a-z]{2}\s+\d{1,2},\s+\d{4})["']/i,
@@ -348,11 +353,28 @@
         return "";
       }
 
+      function formatPlayTimestamp(secondsText, nanosecondsText) {
+        const seconds = Number(secondsText);
+        const nanoseconds = Number(nanosecondsText);
+        if (!Number.isSafeInteger(seconds) || !Number.isSafeInteger(nanoseconds) || nanoseconds < 0 || nanoseconds >= 1_000_000_000) return "";
+        const date = new Date(seconds * 1_000 + Math.floor(nanoseconds / 1_000_000));
+        if (Number.isNaN(date.getTime())) return "";
+        const pad = value => String(value).padStart(2, "0");
+        return `${date.getFullYear()}/${pad(date.getMonth() + 1)}/${pad(date.getDate())}-${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+      }
+
       function extractUpdatedOn(html) {
         const decodedHtml = /\\[ux][0-9a-fA-F]/.test(html) ? decodeGoogleEscapes(html) : html;
         for (const source of decodedHtml === html ? [html] : [html, decodedHtml]) {
           const updatedOn = findWithPatterns(source, UPDATED_ON_PATTERNS);
-          if (updatedOn) return updatedOn.trim();
+          if (!updatedOn) continue;
+          const displayedUpdatedOn = updatedOn.trim();
+          for (const timestampMatch of source.matchAll(PLAY_UPDATED_TIMESTAMP_PATTERN)) {
+            if (timestampMatch[1] !== displayedUpdatedOn) continue;
+            const preciseUpdatedOn = formatPlayTimestamp(timestampMatch[2], timestampMatch[3]);
+            if (preciseUpdatedOn) return preciseUpdatedOn;
+          }
+          return displayedUpdatedOn;
         }
         return "";
       }
