@@ -1,0 +1,1244 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GP Checker</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f4f7fb;
+      --card: #fff;
+      --ink: #152033;
+      --muted: #68758a;
+      --line: #e5eaf1;
+      --brand: #0f766e;
+      --brand-dark: #0a5f58;
+      --warn: #b45309;
+      --warn-pale: #fef3c7;
+      --danger: #be123c;
+      --danger-pale: #ffe4e6;
+      --shadow: 0 14px 38px rgb(15 23 42 / 7%);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+    }
+
+    * { box-sizing: border-box; }
+    body { margin: 0; min-width: 320px; }
+    body.modal-open { overflow: hidden; }
+    body.is-sorting { user-select: none; cursor: grabbing; }
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+
+    .shell { width: min(1180px, calc(100% - 32px)); margin: 0 auto; padding: 34px 0 70px; }
+    .hero { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; margin-bottom: 22px; }
+    h1 { margin: 0; font-size: clamp(19px, 2.5vw, 21px); letter-spacing: -.03em; }
+    .hero p { margin: 8px 0 0; color: var(--muted); line-height: 1.55; }
+    .dashboard { display: grid; grid-template-columns: minmax(0, 1fr) 320px; align-items: start; gap: 16px; transition: grid-template-columns .2s ease; }
+    .dashboard.messages-collapsed { grid-template-columns: minmax(0, 1fr) 78px; }
+    .workspace { min-width: 0; }
+
+    .config, .add-card, .app-card { background: var(--card); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); }
+    .config { margin-bottom: 18px; overflow: hidden; }
+    .config summary { display: flex; align-items: center; justify-content: space-between; padding: 15px 18px; cursor: pointer; font-size: 14px; font-weight: 750; list-style: none; }
+    .config summary::-webkit-details-marker { display: none; }
+    .config summary::after { content: "⌄"; color: var(--muted); font-size: 18px; transition: transform .16s ease; }
+    .config[open] summary::after { transform: rotate(180deg); }
+    .config-body { border-top: 1px solid var(--line); padding: 18px; }
+    .config-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    .config-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+    .config-feedback { color: var(--muted); font-size: 13px; font-weight: 650; }
+    .config-feedback.is-error { color: var(--danger); }
+    .hint { margin: 12px 0 0; color: var(--muted); font-size: 13px; line-height: 1.55; }
+    .hint strong { color: var(--brand-dark); }
+
+    .add-card { padding: 18px; margin-bottom: 20px; }
+    .section-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+    h2, h3 { margin: 0; letter-spacing: -.02em; }
+    h2 { font-size: 17px; }
+    h3 { font-size: 16px; }
+    .add-form { display: grid; grid-template-columns: minmax(130px, .55fr) minmax(200px, 1.45fr) auto; gap: 12px; align-items: end; }
+    .form-error { min-height: 1.3em; margin: 10px 0 0; color: var(--danger); font-size: 13px; }
+
+    label { display: grid; gap: 7px; color: #3c485d; font-size: 13px; font-weight: 700; }
+    input, select { min-width: 0; width: 100%; border: 1px solid #cfd8e5; border-radius: 9px; padding: 10px 11px; color: var(--ink); background: #fff; outline: none; }
+    input:focus, select:focus { border-color: #14b8a6; box-shadow: 0 0 0 3px rgb(20 184 166 / 15%); }
+    input:disabled, select:disabled { cursor: not-allowed; color: #94a3b8; background: #f1f5f9; }
+
+    .button { border: 1px solid transparent; border-radius: 9px; padding: 10px 14px; font-weight: 750; white-space: nowrap; }
+    .button.primary { color: #fff; background: var(--brand); }
+    .button.primary:hover { background: var(--brand-dark); }
+    .button.secondary { color: #344054; border-color: #d5dce7; background: #fff; }
+    .button.secondary:hover { background: #f8fafc; }
+    .button.danger { color: var(--danger); border-color: #fecdd3; background: #fff; }
+    .button.danger:hover { background: #fff1f2; }
+    .button:disabled { cursor: wait; opacity: .58; }
+    .icon-button { display: inline-grid; width: 32px; height: 32px; place-items: center; appearance: none; border: 0; border-radius: 50%; color: #475569; background: transparent; }
+    .icon-button:hover { color: var(--brand-dark); background: #eef7f6; }
+    .icon-button:focus-visible, .collapse-button:focus-visible { outline: 3px solid rgb(20 184 166 / 24%); outline-offset: 2px; }
+    .icon-button:disabled { cursor: wait; opacity: .58; }
+    .icon-button svg { display: block; width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.9; transform-box: view-box; transform-origin: 50% 50%; }
+    .icon-button.delete { color: var(--danger); }
+    .icon-button.delete:hover { color: #9f1239; background: #fff1f2; }
+    .icon-button.is-spinning svg { animation: spin .8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .text-button { border: 0; padding: 3px 0; color: var(--brand-dark); background: transparent; font-size: 13px; font-weight: 750; }
+    .text-button:hover { color: var(--brand); }
+    .text-button.danger { color: var(--danger); }
+
+    .list { display: grid; gap: 16px; }
+    .empty-state { padding: 48px 20px; border: 1px dashed #cbd5e1; border-radius: 16px; color: var(--muted); text-align: center; background: rgb(255 255 255 / 55%); }
+
+    .app-card { display: grid; grid-template-columns: 34px minmax(0, 1fr); overflow: hidden; transition: box-shadow .16s ease; }
+    .app-card.is-dragging { position: fixed; z-index: 900; margin: 0; opacity: .96; pointer-events: none; box-shadow: 0 20px 45px rgb(15 23 42 / 20%); cursor: grabbing; will-change: left, top; transition: none; }
+    .drag-placeholder { border: 1px dashed #5eead4; border-radius: 18px; background: rgb(240 253 250 / 76%); box-shadow: inset 0 0 0 1px rgb(20 184 166 / 10%); }
+    .drag-handle { display: grid; min-width: 0; place-items: center; border-right: 1px solid var(--line); color: #94a3b8; background: #f8fafc; cursor: grab; touch-action: none; }
+    .drag-handle:hover { color: var(--brand-dark); background: #eef7f6; }
+    .drag-handle:active { cursor: grabbing; }
+    .drag-handle:focus-visible { outline: 3px solid rgb(20 184 166 / 24%); outline-offset: -3px; }
+    .drag-handle svg { width: 17px; height: 26px; fill: currentColor; }
+    .app-main { padding: 18px; }
+    .app-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 15px; margin-bottom: 16px; }
+    .app-top h3 { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+    .app-code { color: #475569; font-size: 13px; font-weight: 750; }
+    .app-actions { display: flex; gap: 9px; align-items: center; }
+
+    .version-info { display: flex; align-items: baseline; flex-wrap: wrap; gap: 7px 10px; margin-bottom: 16px; padding: 9px 12px; border: 1px solid var(--line); border-radius: 10px; background: #fbfcfe; }
+    .version-info > span { color: var(--muted); font-size: 12px; font-weight: 700; }
+    .version-info strong { color: #334155; font-size: 13px; font-weight: 750; }
+    .version-info .info-divider { align-self: stretch; width: 1px; min-height: 16px; margin: 0 2px; background: var(--line); }
+    .metric { min-width: 0; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: #fbfcfe; }
+    .metric > span { display: block; margin-bottom: 5px; color: var(--muted); font-size: 12px; font-weight: 650; }
+    .metric strong { display: block; overflow: hidden; font-size: 15px; text-overflow: ellipsis; white-space: nowrap; }
+    .state { display: inline-flex; align-items: center; gap: 6px; width: fit-content; border-radius: 999px; padding: 5px 9px; font-size: 13px; font-weight: 800; }
+    .state::before { width: 7px; height: 7px; border-radius: 50%; background: currentColor; content: ""; }
+    .state.online { color: #047857; background: #d1fae5; }
+    .state.offline { color: var(--danger); background: var(--danger-pale); }
+    .state.unknown { color: var(--warn); background: var(--warn-pale); }
+    .state.checking { color: #1d4ed8; background: #dbeafe; }
+
+    .fields { display: grid; grid-template-columns: minmax(130px, .5fr) minmax(220px, 1.3fr) minmax(115px, .45fr); gap: 12px; align-items: end; }
+    .interval-field { position: relative; display: grid; grid-template-columns: 1fr 82px; gap: 7px; }
+    .interval-feedback { position: absolute; z-index: 2; top: calc(100% + 6px); left: 0; width: max-content; max-width: 250px; border: 1px solid #fcd34d; border-radius: 8px; padding: 6px 9px; color: #92400e; background: #fffbeb; box-shadow: 0 7px 16px rgb(146 64 14 / 12%); font-size: 12px; font-weight: 700; line-height: 1.25; }
+    .interval-feedback::before { position: absolute; top: -5px; left: 13px; width: 8px; height: 8px; border-top: 1px solid #fcd34d; border-left: 1px solid #fcd34d; background: #fffbeb; content: ""; transform: rotate(45deg); }
+    .refresh-time { margin: 11px 0 0; color: var(--muted); font-size: 12px; }
+
+    .switches { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 16px; padding-top: 15px; border-top: 1px solid var(--line); }
+    .switch { display: inline-flex; align-items: center; gap: 8px; color: #334155; font-size: 13px; font-weight: 700; cursor: pointer; }
+    .switch input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+    .switch-track { position: relative; width: 34px; height: 20px; border-radius: 999px; background: #cbd5e1; transition: background .16s ease; }
+    .switch-track::after { position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgb(15 23 42 / 22%); content: ""; transition: transform .16s ease; }
+    .switch input:checked + .switch-track { background: var(--brand); }
+    .switch input:checked + .switch-track::after { transform: translateX(14px); }
+    .switch input:focus-visible + .switch-track { outline: 3px solid rgb(20 184 166 / 24%); outline-offset: 2px; }
+    .switch.is-disabled { cursor: not-allowed; color: #94a3b8; }
+    .switch.is-disabled .switch-track { background: #e2e8f0; }
+
+    .global-messages { display: flex; position: sticky; top: 24px; min-width: 0; max-height: calc(100vh - 48px); flex-direction: column; border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); background: #fbfcfe; overflow: hidden; }
+    .messages-head { display: grid; grid-template-columns: 25px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 13px 18px; }
+    .messages-title { display: flex; min-width: 0; align-items: center; gap: 9px; line-height: 20px; font-size: 14px; font-weight: 800; }
+    .message-symbol { display: inline-grid; width: 20px; height: 20px; place-items: center; color: var(--brand-dark); }
+    .message-symbol svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
+    .unread { display: inline-flex; align-items: center; justify-content: center; min-width: 19px; height: 19px; border-radius: 999px; padding: 0 6px; color: #fff; background: var(--danger); font-size: 11px; }
+    .messages-tools { display: flex; min-height: 25px; align-items: center; justify-content: flex-end; gap: 13px; }
+    .collapse-button { display: inline-grid; width: 25px; height: 25px; place-items: center; border: 0; border-radius: 50%; padding: 0; color: var(--muted); background: transparent; }
+    .collapse-button svg { display: block; width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2; }
+    .collapse-button:hover { color: var(--brand-dark); background: #eef7f6; }
+    .message-list { display: grid; flex: 1; gap: 8px; min-height: 0; padding: 0 18px 17px; overflow-y: auto; overscroll-behavior: contain; }
+    .message { display: grid; grid-template-columns: 1fr auto; gap: 8px 14px; padding: 11px 12px; border: 1px solid #fed7aa; border-left: 3px solid #f97316; border-radius: 10px; background: #fffaf1; }
+    .message.is-read { border-color: var(--line); border-left-color: #94a3b8; background: #fff; }
+    .message strong { font-size: 13px; }
+    .message-actions { display: flex; align-items: start; gap: 10px; }
+    .message p { grid-column: 1 / -1; margin: 0; color: #4b5563; font-size: 13px; line-height: 1.5; word-break: break-word; }
+    .message time { color: var(--muted); font-size: 12px; }
+    .message-meta { grid-column: 1 / -1; display: flex; align-items: center; flex-wrap: wrap; gap: 6px; color: var(--muted); font-size: 12px; }
+    .delivery-state { display: inline-flex; align-items: center; border-radius: 999px; padding: 3px 7px; color: #475569; background: #e2e8f0; font-size: 11px; font-weight: 750; }
+    .delivery-state.pending, .delivery-state.sending { color: #1d4ed8; background: #dbeafe; }
+    .delivery-state.success { color: #047857; background: #d1fae5; }
+    .delivery-state.failed { color: #b45309; background: #fef3c7; }
+    .delivery-state.cancelled { color: #64748b; background: #e2e8f0; }
+    .delivery-response { grid-column: 1 / -1; max-height: 180px; margin: 0; overflow: auto; border: 1px solid #bfdbfe; border-radius: 8px; padding: 9px; color: #1e3a5f; background: #eff6ff; font: 11px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; word-break: break-word; }
+    .message-empty { margin: 0; padding: 6px 0; color: var(--muted); font-size: 13px; }
+    .dashboard.messages-collapsed .global-messages { height: 48px; min-height: 0; max-height: 48px; border-radius: 14px; }
+    .dashboard.messages-collapsed .messages-head { width: 78px; height: 48px; grid-template-columns: 25px minmax(0, 1fr); justify-content: initial; gap: 8px; padding: 0 7px; }
+    .dashboard.messages-collapsed .messages-title { position: relative; gap: 0; }
+    .dashboard.messages-collapsed .message-label { display: none; }
+    .dashboard.messages-collapsed .unread { position: absolute; top: -7px; right: -10px; min-width: 16px; height: 16px; padding: 0 4px; font-size: 10px; }
+    .dashboard.messages-collapsed .messages-tools { display: none; }
+
+    .modal-backdrop { position: fixed; z-index: 1000; inset: 0; display: grid; place-items: center; padding: 20px; background: rgb(15 23 42 / 46%); }
+    .modal-backdrop[hidden] { display: none; }
+    .confirm-dialog { width: min(100%, 410px); border: 1px solid rgb(255 255 255 / 50%); border-radius: 18px; padding: 22px; box-shadow: 0 24px 70px rgb(15 23 42 / 28%); background: #fff; }
+    .confirm-dialog h2 { font-size: 18px; }
+    .confirm-dialog p { margin: 11px 0 0; color: #536174; line-height: 1.6; word-break: break-word; }
+    .confirm-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; }
+
+    @media (max-width: 800px) {
+      .dashboard, .dashboard.messages-collapsed { grid-template-columns: 1fr; }
+      .global-messages { position: static; max-height: 360px; }
+      .dashboard.messages-collapsed .global-messages { height: auto; min-height: 0; max-height: none; }
+      .dashboard.messages-collapsed .messages-head { width: auto; height: auto; min-height: 0; grid-template-columns: 25px minmax(0, 1fr) auto; padding: 13px 18px; }
+      .dashboard.messages-collapsed .messages-title { font-size: 14px; }
+      .dashboard.messages-collapsed .message-label { display: inline; }
+      .dashboard.messages-collapsed .unread { position: static; min-width: 19px; height: 19px; padding: 0 6px; font-size: 11px; }
+      .dashboard.messages-collapsed .messages-tools { display: flex; }
+      .fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 580px) {
+      .shell { width: min(100% - 20px, 1180px); padding-top: 20px; }
+      .hero { display: block; }
+      .config-grid, .add-form, .fields { grid-template-columns: 1fr; }
+      .add-form .button { width: 100%; }
+      .app-top { display: block; }
+      .app-actions { margin-top: 13px; }
+      .switches { display: grid; grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="hero">
+      <div>
+        <h1>Google Play 状态监测</h1>
+        <p>集中查看应用在线状态、版本变化与待处理提醒。</p>
+      </div>
+    </header>
+
+    <div class="dashboard" id="dashboard">
+      <section class="workspace">
+    <details class="config" id="global-config" open>
+      <summary>全局配置</summary>
+      <div class="config-body">
+        <div class="config-grid">
+          <label>飞书机器人通知 URL<input id="notification-url" type="url" placeholder="https://open.feishu.cn/open-apis/bot/v2/hook/..."></label>
+          <label>Google Play CORS 代理（可选）<input id="proxy-url" placeholder="https://your-proxy.example/?url={url}"></label>
+        </div>
+        <div class="config-actions"><button id="test-robot" class="button secondary" type="button">发送测试提醒</button><span id="config-feedback" class="config-feedback" role="status"></span></div>
+        <p class="hint">运行 <code>start-gpchecker.sh</code>（macOS）或 <code>start-gpchecker.bat</code>（Windows）后从本机地址打开页面，会自动使用内置同源通道；URL 中包含 <code>{url}</code> 时会替换为编码后的详情页地址。飞书通知需要使用本机服务，以便安全转发并记录返回结果。</p>
+      </div>
+    </details>
+
+    <section class="add-card">
+      <div class="section-heading"><h2>新增监测应用</h2></div>
+      <form class="add-form" id="add-form">
+        <label>编号<input id="new-code" maxlength="80" placeholder="例如：GP-001" required></label>
+        <label>包名<input id="new-package" placeholder="例如：com.example.app" autocomplete="off" required></label>
+        <button class="button primary" type="submit">添加并检测</button>
+      </form>
+      <p class="form-error" id="add-error" aria-live="polite"></p>
+    </section>
+
+    <section class="list" id="app-list" aria-live="polite"></section>
+      </section>
+      <aside class="global-messages" id="global-messages" aria-live="polite"></aside>
+    </div>
+  </main>
+
+  <div class="modal-backdrop" id="delete-dialog" hidden>
+    <section class="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="delete-dialog-title" aria-describedby="delete-dialog-description">
+      <h2 id="delete-dialog-title">删除监测项？</h2>
+      <p id="delete-dialog-description">删除后将停止监测该应用。</p>
+      <div class="confirm-actions">
+        <button class="button secondary" type="button" data-dialog-action="cancel">取消</button>
+        <button class="button danger" type="button" data-dialog-action="confirm">确认删除</button>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    /*
+     * Google Play 基础能力（无第三方依赖）。
+     *
+     * 返回约定：
+     * - getOnlineVersionName: 字符串=成功解析到版本名；null=Google Play 明确不存在；""=请求/解析失败。
+     * - getOnlineUpdatedOn: 英文原始日期字符串=成功解析到更新时间；null=Google Play 明确不存在；""=请求/解析失败。
+     * - checkAppOnline: true=详情页存在；false=明确不存在；null=网络异常或无法确认。
+     */
+    const GPChecker = (() => {
+      const PLAY_DETAILS_URL = "https://play.google.com/store/apps/details";
+      const NOT_FOUND_MARKER = "We're sorry, the requested URL was not found on this server.";
+      const MAX_CACHE_ENTRIES = 100;
+      const inFlightInspections = new Map();
+      const recentInspections = new Map();
+      // 更新时间用于变更提醒，因此所有请求固定使用英文商店文案（Updated on · Aug 29, 2026）。
+      const PLAY_LANGUAGE = "en_US";
+      const DEFAULT_OPTIONS = Object.freeze({ language: PLAY_LANGUAGE, country: "US", proxyUrl: "", retries: 2, timeoutMs: 15_000, cacheTtlMs: 30_000 });
+      const VERSION_PATTERNS = [
+        /(?:Current\s+Version|Version(?:\s+name)?)\s*(?:<[^>]+>\s*)*[:：]?\s*(\d+(?:\.\d+)+(?:[-+._][0-9A-Za-z.-]+)?)/i,
+        /["'](?:versionName|version_name)["']\s*[:=]\s*["'](\d+(?:\.\d+)+(?:[-+._][0-9A-Za-z.-]+)?)["']/i,
+        /itemprop=["']softwareVersion["'][^>]*>\s*(\d+(?:\.\d+)+(?:[-+._][0-9A-Za-z.-]+)?)/i,
+      ];
+      // Google Play 主详情数据中的统一版本字段：
+      // [[["版本名"]],[[[目标 SDK]],[[[最低 SDK,"最低 Android 版本"]]]]]
+      // 该结构与用户评论中的版本号无关，避免将评论版本误判为在线版本。
+      const PLAY_DETAILS_VERSION_PATTERN = /\[\[\[\s*["']([^"']{1,80})["']\s*\]\]\s*,\s*\[\[\[\s*\d+\s*\]\]\s*,\s*\[\[\[\s*\d+\s*,\s*["'][^"']{1,40}["']\s*\]\]\s*\]\]/;
+      const UPDATED_ON_PATTERNS = [
+        /(?:^|>)\s*Updated\s+on\s*(?:<[^>]+>\s*)+([A-Z][a-z]{2}\s+\d{1,2},\s+\d{4})(?:\s*<|$)/i,
+        /["']Updated on["'][\s\S]{0,160}?["']([A-Z][a-z]{2}\s+\d{1,2},\s+\d{4})["']/i,
+      ];
+
+      function normalizeOptions(rawOptions = {}) {
+        const merged = { ...DEFAULT_OPTIONS, ...rawOptions };
+        return {
+          ...merged,
+          language: PLAY_LANGUAGE,
+          country: String(merged.country || "").trim(),
+          retries: Math.max(0, Number(merged.retries) || 0),
+          timeoutMs: Math.max(1, Number(merged.timeoutMs) || DEFAULT_OPTIONS.timeoutMs),
+          cacheTtlMs: Math.max(0, Number(merged.cacheTtlMs) || 0),
+        };
+      }
+
+      function validatePackageName(packageName) {
+        const normalized = String(packageName || "").trim();
+        if (!/^[A-Za-z][A-Za-z0-9_]*(?:\.[A-Za-z][A-Za-z0-9_]*)+$/.test(normalized)) {
+          throw new TypeError("请输入合法的 Android 包名，例如 com.example.app。");
+        }
+        return normalized;
+      }
+
+      function buildDetailsUrl(packageName, options = DEFAULT_OPTIONS) {
+        const params = new URLSearchParams({ id: validatePackageName(packageName), hl: PLAY_LANGUAGE });
+        if (options.country) params.set("gl", options.country);
+        return `${PLAY_DETAILS_URL}?${params}`;
+      }
+
+      function buildRequestUrl(detailsUrl, proxyUrl) {
+        const proxy = String(proxyUrl || "").trim();
+        if (!proxy) return detailsUrl;
+        const encodedDetailsUrl = encodeURIComponent(detailsUrl);
+        return proxy.includes("{url}") ? proxy.replaceAll("{url}", encodedDetailsUrl) : `${proxy}${encodedDetailsUrl}`;
+      }
+
+      function decodeGoogleEscapes(value) {
+        return value
+          .replace(/\\u([0-9a-fA-F]{4})/g, (_, hex) => String.fromCharCode(Number.parseInt(hex, 16)))
+          .replace(/\\x([0-9a-fA-F]{2})/g, (_, hex) => String.fromCharCode(Number.parseInt(hex, 16)));
+      }
+
+      function escapeRegExp(value) { return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
+
+      function findWithPatterns(source, patterns) {
+        for (const pattern of patterns) {
+          const match = source.match(pattern);
+          if (match) return match[1];
+        }
+        return "";
+      }
+
+      function extractPlayDetailsVersion(source, packageName) {
+        for (const scriptMatch of source.matchAll(/<script\b[^>]*>[\s\S]*?<\/script>/gi)) {
+          const script = scriptMatch[0];
+          if (!script.includes(packageName)) continue;
+          const match = script.match(PLAY_DETAILS_VERSION_PATTERN);
+          if (match) return match[1].trim();
+        }
+        return "";
+      }
+
+      function extractVersionName(html, packageName) {
+        const decodedHtml = /\\[ux][0-9a-fA-F]/.test(html) ? decodeGoogleEscapes(html) : html;
+        for (const source of decodedHtml === html ? [html] : [html, decodedHtml]) {
+          const playDetailsVersion = extractPlayDetailsVersion(source, packageName);
+          if (playDetailsVersion) return playDetailsVersion;
+          const legacyVersion = findWithPatterns(source, VERSION_PATTERNS);
+          if (legacyVersion) return legacyVersion;
+        }
+        return "";
+      }
+
+      function extractUpdatedOn(html) {
+        const decodedHtml = /\\[ux][0-9a-fA-F]/.test(html) ? decodeGoogleEscapes(html) : html;
+        for (const source of decodedHtml === html ? [html] : [html, decodedHtml]) {
+          const updatedOn = findWithPatterns(source, UPDATED_ON_PATTERNS);
+          if (updatedOn) return updatedOn.trim();
+        }
+        return "";
+      }
+
+      function isNotFound(response, html) { return response.status === 404 || html.includes(NOT_FOUND_MARKER); }
+
+      async function requestDetailsPage(packageName, options, detailsUrl) {
+        const targetUrl = detailsUrl || buildDetailsUrl(packageName, options);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), options.timeoutMs);
+        try {
+          const response = await fetch(buildRequestUrl(targetUrl, options.proxyUrl), { method: "GET", headers: { Accept: "text/html,application/xhtml+xml", "Accept-Language": "en-US,en;q=0.9" }, signal: controller.signal });
+          return { response, html: await response.text(), detailsUrl: targetUrl };
+        } finally {
+          clearTimeout(timeoutId);
+        }
+      }
+
+      async function requestWithRetries(packageName, options, detailsUrl) {
+        let lastError;
+        for (let attempt = 0; attempt <= options.retries; attempt += 1) {
+          try {
+            const page = await requestDetailsPage(packageName, options, detailsUrl);
+            if (page.response.ok || isNotFound(page.response, page.html) || attempt === options.retries) return page;
+          } catch (error) {
+            lastError = error;
+            if (attempt === options.retries) throw error;
+          }
+        }
+        throw lastError || new Error("无法请求 Google Play 详情页。");
+      }
+
+      async function inspectAppUncached(packageName, options, detailsUrl) {
+        try {
+          const page = await requestWithRetries(packageName, options, detailsUrl);
+          if (isNotFound(page.response, page.html)) return { packageName, online: false, version: null, updatedOn: null, detailsUrl: page.detailsUrl };
+          if (!page.response.ok) return { packageName, online: null, version: "", updatedOn: "", detailsUrl: page.detailsUrl, error: `HTTP ${page.response.status}` };
+          return { packageName, online: true, version: extractVersionName(page.html, packageName), updatedOn: extractUpdatedOn(page.html), detailsUrl: page.detailsUrl };
+        } catch (error) {
+          return { packageName, online: null, version: "", updatedOn: "", detailsUrl, error: error instanceof Error ? error.message : String(error) };
+        }
+      }
+
+      function inspectionKey(packageName, options, detailsUrl) { return JSON.stringify([packageName, detailsUrl, String(options.proxyUrl || "").trim()]); }
+
+      function readCachedInspection(key, now) {
+        const cached = recentInspections.get(key);
+        if (!cached) return null;
+        if (cached.expiresAt <= now) { recentInspections.delete(key); return null; }
+        recentInspections.delete(key);
+        recentInspections.set(key, cached);
+        return cached.value;
+      }
+
+      function cacheInspection(key, value, cacheTtlMs) {
+        if (cacheTtlMs <= 0 || value.online === null) return;
+        const now = Date.now();
+        for (const [cachedKey, cached] of recentInspections) if (cached.expiresAt <= now) recentInspections.delete(cachedKey);
+        while (recentInspections.size >= MAX_CACHE_ENTRIES) recentInspections.delete(recentInspections.keys().next().value);
+        recentInspections.set(key, { value, expiresAt: now + cacheTtlMs });
+      }
+
+      async function inspectApp(packageName, rawOptions = {}) {
+        const options = normalizeOptions(rawOptions);
+        const normalizedPackageName = validatePackageName(packageName);
+        const detailsUrl = buildDetailsUrl(normalizedPackageName, options);
+        const key = inspectionKey(normalizedPackageName, options, detailsUrl);
+        const cached = readCachedInspection(key, Date.now());
+        if (cached) return cached;
+        const inFlight = inFlightInspections.get(key);
+        if (inFlight) return inFlight;
+        const request = inspectAppUncached(normalizedPackageName, options, detailsUrl)
+          .then(value => { cacheInspection(key, value, options.cacheTtlMs); return value; })
+          .finally(() => inFlightInspections.delete(key));
+        inFlightInspections.set(key, request);
+        return request;
+      }
+
+      return Object.freeze({
+        checkAppOnline: async (packageName, options = {}) => (await inspectApp(packageName, options)).online,
+        getOnlineVersionName: async (packageName, options = {}) => (await inspectApp(packageName, options)).version,
+        getOnlineUpdatedOn: async (packageName, options = {}) => (await inspectApp(packageName, options)).updatedOn,
+        inspectApp,
+        extractVersionName,
+        extractUpdatedOn,
+        buildDetailsUrl,
+        clearCache: () => recentInspections.clear(),
+      });
+    })();
+
+    window.GPChecker = GPChecker;
+
+    const STORAGE_KEY = "gp-checker-dashboard-v1";
+    const ROBOT_RETRY_BASE_MS = 5_000;
+    const ROBOT_RETRY_MAX_MS = 5 * 60_000;
+    const ROBOT_SEND_MIN_INTERVAL_MS = 1_000;
+    const DEFAULT_APP = () => ({
+      id: crypto.randomUUID(),
+      code: "",
+      packageName: "",
+      monitorEnabled: true,
+      onlineAlertEnabled: true,
+      offlineAlertEnabled: true,
+      versionChangeAlertEnabled: true,
+      intervalValue: 5,
+      intervalDraft: null,
+      intervalHint: "",
+      intervalUnit: "minutes",
+      status: "unknown",
+      lastDetectedStatus: null,
+      versionName: "",
+      lastUpdatedText: "",
+      lastSuccessfulAt: null,
+      lastAttemptAt: null,
+      checking: false,
+      lastError: "",
+    });
+
+    const state = loadState();
+    const intervalHintTimers = new Map();
+    const dashboard = document.querySelector("#dashboard");
+    const appList = document.querySelector("#app-list");
+    const globalMessages = document.querySelector("#global-messages");
+    const shell = document.querySelector(".shell");
+    const addForm = document.querySelector("#add-form");
+    const addError = document.querySelector("#add-error");
+    const notificationUrlInput = document.querySelector("#notification-url");
+    const proxyUrlInput = document.querySelector("#proxy-url");
+    const testRobotButton = document.querySelector("#test-robot");
+    const configFeedback = document.querySelector("#config-feedback");
+    const deleteDialog = document.querySelector("#delete-dialog");
+    const deleteDialogDescription = document.querySelector("#delete-dialog-description");
+    let pendingDeleteId = null;
+    let activeSortDrag = null;
+    const activeRobotRequests = new Map();
+    let nextRobotSendAt = 0;
+    let robotDispatchTimer = null;
+
+    notificationUrlInput.value = state.config.notificationUrl;
+    proxyUrlInput.value = state.config.proxyUrl;
+
+    function isLocalServer() {
+      return ["127.0.0.1", "localhost"].includes(location.hostname) && /^https?:$/.test(location.protocol);
+    }
+
+    function defaultConfig() {
+      const localServer = isLocalServer();
+      return { notificationUrl: "", proxyUrl: localServer ? `${location.origin}/api/play?url={url}` : "" };
+    }
+
+    function loadState() {
+      const defaults = defaultConfig();
+      try {
+        const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+        if (!saved || !Array.isArray(saved.items)) throw new Error("No saved state");
+        const legacyMessages = saved.items.flatMap(item => Array.isArray(item.messages) ? item.messages : []);
+        return {
+          config: { notificationUrl: String(saved.config?.notificationUrl || ""), proxyUrl: String(saved.config?.proxyUrl ?? defaults.proxyUrl) },
+          items: saved.items.map(normalizeApp),
+          messages: (Array.isArray(saved.messages) ? saved.messages : legacyMessages)
+            .filter(Boolean).map(normalizeMessage)
+            .sort((left, right) => (Number(right.createdAt) || 0) - (Number(left.createdAt) || 0)),
+          messagesExpanded: saved.messagesExpanded !== false,
+        };
+      } catch {
+        return { config: defaults, items: [], messages: [], messagesExpanded: true };
+      }
+    }
+
+    function normalizeApp(value) {
+      const { versionCode: _versionCode, updateAlertEnabled: _updateAlertEnabled, downgradeAlertEnabled: _downgradeAlertEnabled, messages: _messages, messagesExpanded: _messagesExpanded, intervalDraft: _intervalDraft, intervalHint: _intervalHint, ...savedApp } = value;
+      const app = { ...DEFAULT_APP(), ...savedApp };
+      app.checking = false;
+      app.intervalDraft = null;
+      app.intervalHint = "";
+      app.lastUpdatedText = String(app.lastUpdatedText || "").trim();
+      app.intervalUnit = ["seconds", "minutes", "hours"].includes(app.intervalUnit) ? app.intervalUnit : "minutes";
+      const savedInterval = Number(app.intervalValue);
+      app.intervalValue = Math.max(minimumIntervalValue(app.intervalUnit), Number.isFinite(savedInterval) ? savedInterval : 5);
+      return app;
+    }
+
+    function normalizeRobotState(value, hasRobotState) {
+      if (!hasRobotState) return { status: "legacy", attempts: 0, lastAttemptAt: null, nextRetryAt: null, sentAt: null, lastError: "", response: null };
+      const robot = { status: "not-configured", attempts: 0, lastAttemptAt: null, nextRetryAt: null, sentAt: null, lastError: "", response: null, ...value };
+      if (robot.status === "sending") robot.status = "retry";
+      return robot;
+    }
+
+    function normalizeMessage(value) {
+      const readAt = value.readAt || (value.isRead ? Number(value.createdAt) || Date.now() : null);
+      const robot = normalizeRobotState(value.robot, Object.prototype.hasOwnProperty.call(value, "robot"));
+      if (readAt && robot.status !== "success") robot.status = "cancelled";
+      return {
+        id: value.id || crypto.randomUUID(),
+        title: String(value.title || "提醒"),
+        content: String(value.content || ""),
+        createdAt: Number(value.createdAt) || Date.now(),
+        readAt: readAt ? Number(readAt) : null,
+        showRobotResponse: value.showRobotResponse === true,
+        robot,
+      };
+    }
+
+    function persist() {
+      try {
+        const serializableItems = state.items.map(({ checking, intervalDraft, intervalHint, ...item }) => item);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({
+          config: state.config,
+          items: serializableItems,
+          messages: state.messages,
+          messagesExpanded: state.messagesExpanded,
+        }));
+      } catch (error) {
+        console.warn("无法保存 GP Checker 数据", error);
+      }
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "").replace(/[&<>'"]/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[char]);
+    }
+
+    function getApp(id) { return state.items.find(item => item.id === id); }
+
+    function moveSortPlaceholder() {
+      if (!activeSortDrag) return;
+      const draggedBounds = activeSortDrag.card.getBoundingClientRect();
+      const candidates = [...appList.querySelectorAll(".app-card:not(.is-dragging)")];
+      if (activeSortDrag.direction >= 0) {
+        const passedCards = candidates.filter(card => {
+          const bounds = card.getBoundingClientRect();
+          return draggedBounds.bottom > bounds.top + bounds.height / 2;
+        });
+        if (passedCards.length) passedCards.at(-1).after(activeSortDrag.placeholder);
+        else if (candidates[0]) appList.insertBefore(activeSortDrag.placeholder, candidates[0]);
+        return;
+      }
+      const nextCard = candidates.find(card => {
+        const bounds = card.getBoundingClientRect();
+        return draggedBounds.top < bounds.top + bounds.height / 2;
+      });
+      if (nextCard) appList.insertBefore(activeSortDrag.placeholder, nextCard);
+      else appList.append(activeSortDrag.placeholder);
+    }
+
+    function finishSortDrag(commit) {
+      if (!activeSortDrag) return;
+      const { card, handle, pointerId, placeholder } = activeSortDrag;
+      if (handle.hasPointerCapture?.(pointerId)) handle.releasePointerCapture(pointerId);
+      card.classList.remove("is-dragging");
+      card.style.removeProperty("position");
+      card.style.removeProperty("z-index");
+      card.style.removeProperty("width");
+      card.style.removeProperty("left");
+      card.style.removeProperty("top");
+      document.body.classList.remove("is-sorting");
+
+      if (commit) {
+        placeholder.replaceWith(card);
+        const orderedItems = [...appList.querySelectorAll(".app-card")]
+          .map(listCard => getApp(listCard.dataset.id))
+          .filter(Boolean);
+        if (orderedItems.length === state.items.length) state.items = orderedItems;
+        persist();
+        render();
+      } else {
+        placeholder.remove();
+      }
+      activeSortDrag = null;
+    }
+
+    function openDeleteDialog(item) {
+      pendingDeleteId = item.id;
+      const label = [item.code || "未编号", item.packageName || "未填写包名"].join(" · ");
+      deleteDialogDescription.textContent = `将删除「${label}」，并停止后续监测。此操作不会影响已保存的其它消息。`;
+      shell.inert = true;
+      document.body.classList.add("modal-open");
+      deleteDialog.hidden = false;
+      deleteDialog.querySelector('[data-dialog-action="confirm"]').focus();
+    }
+
+    function closeDeleteDialog() {
+      pendingDeleteId = null;
+      deleteDialog.hidden = true;
+      shell.inert = false;
+      document.body.classList.remove("modal-open");
+    }
+
+    function intervalMilliseconds(item) {
+      const multiplier = { seconds: 1_000, minutes: 60_000, hours: 3_600_000 }[item.intervalUnit];
+      return item.intervalValue * multiplier;
+    }
+
+    function minimumIntervalValue(unit) {
+      return unit === "seconds" ? 30 : 1;
+    }
+
+    function minimumIntervalLabel(unit) {
+      return unit === "seconds" ? "30 秒" : unit === "hours" ? "1 小时" : "1 分钟";
+    }
+
+    function clearIntervalHint(item) {
+      clearTimeout(intervalHintTimers.get(item.id));
+      intervalHintTimers.delete(item.id);
+      item.intervalHint = "";
+    }
+
+    function showIntervalHint(item, message) {
+      clearIntervalHint(item);
+      item.intervalHint = message;
+      intervalHintTimers.set(item.id, setTimeout(() => {
+        const currentItem = getApp(item.id);
+        if (currentItem?.intervalHint === message) {
+          currentItem.intervalHint = "";
+          render();
+        }
+        intervalHintTimers.delete(item.id);
+      }, 3_200));
+    }
+
+    function formatTime(timestamp) {
+      if (!timestamp) return "尚未成功刷新";
+      return new Intl.DateTimeFormat("zh-CN", { dateStyle: "medium", timeStyle: "medium" }).format(new Date(timestamp));
+    }
+
+    function formatRefreshTime(timestamp) {
+      const date = new Date(timestamp);
+      const pad = value => String(value).padStart(2, "0");
+      return `${date.getFullYear()}/${pad(date.getMonth() + 1)}/${pad(date.getDate())}-${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+    }
+
+    function statusDisplay(item) {
+      if (item.checking) return ["检测中", "checking"];
+      if (item.status === "online") return ["在线", "online"];
+      if (item.status === "offline") return ["离线", "offline"];
+      return ["待检测", "unknown"];
+    }
+
+    function versionDisplay(value) {
+      const versionName = String(value || "").trim();
+      return versionName ? `v${versionName}` : "未知";
+    }
+
+    function robotStateLabel(message) {
+      const robot = message.robot;
+      if (robot.status === "success") return "机器人：已发送";
+      if (robot.status === "sending") return "机器人：发送中";
+      if (robot.status === "pending") return "机器人：等待发送";
+      if (robot.status === "failed") return `机器人：发送失败（第 ${robot.attempts} 次，持续重试）`;
+      if (robot.status === "cancelled") return "机器人：已停止";
+      if (robot.status === "legacy") return "机器人：历史消息未推送";
+      return "机器人：未配置";
+    }
+
+    function robotStateClass(message) {
+      return message.robot.status === "not-configured" || message.robot.status === "legacy" ? "cancelled" : message.robot.status;
+    }
+
+    function robotResponseDisplay(response) {
+      if (response === null || response === undefined) return "";
+      return typeof response === "string" ? response : JSON.stringify(response, null, 2);
+    }
+
+    function retryDelay(attempts) {
+      return Math.min(ROBOT_RETRY_MAX_MS, ROBOT_RETRY_BASE_MS * 2 ** Math.max(0, attempts - 1));
+    }
+
+    function getMessage(id) { return state.messages.find(message => message.id === id); }
+
+    function setConfigFeedback(text = "", isError = false) {
+      configFeedback.textContent = text;
+      configFeedback.classList.toggle("is-error", isError);
+    }
+
+    function cancelRobotDelivery(message) {
+      const controller = activeRobotRequests.get(message.id);
+      if (controller) controller.abort();
+      if (message.robot.status !== "success") {
+        message.robot.status = "cancelled";
+        message.robot.nextRetryAt = null;
+      }
+    }
+
+    function markMessageRead(message) {
+      if (message.readAt) return;
+      message.readAt = Date.now();
+      cancelRobotDelivery(message);
+      persist();
+      render();
+    }
+
+    function deleteMessage(message) {
+      cancelRobotDelivery(message);
+      state.messages = state.messages.filter(candidate => candidate.id !== message.id);
+      persist();
+      render();
+    }
+
+    function createRobotState() {
+      return {
+        status: state.config.notificationUrl ? "pending" : "not-configured",
+        attempts: 0,
+        lastAttemptAt: null,
+        nextRetryAt: null,
+        sentAt: null,
+        lastError: "",
+        response: null,
+      };
+    }
+
+    function isSendableMessage(message, now = Date.now()) {
+      if (message.readAt || !state.config.notificationUrl || activeRobotRequests.has(message.id)) return false;
+      if (!["pending", "not-configured", "failed"].includes(message.robot.status)) return false;
+      return !message.robot.nextRetryAt || message.robot.nextRetryAt <= now;
+    }
+
+    async function deliverRobotMessage(message) {
+      if (!isSendableMessage(message)) return;
+      const endpoint = isLocalServer() ? `${location.origin}/api/notify` : "";
+      if (!endpoint) {
+        message.robot.status = "failed";
+        message.robot.lastError = "请通过 start-gpchecker 启动的本机地址打开页面后发送飞书通知。";
+        message.robot.nextRetryAt = Date.now() + retryDelay(message.robot.attempts + 1);
+        persist();
+        render();
+        return;
+      }
+
+      const controller = new AbortController();
+      activeRobotRequests.set(message.id, controller);
+      message.robot.status = "sending";
+      message.robot.attempts += 1;
+      message.robot.lastAttemptAt = Date.now();
+      message.robot.lastError = "";
+      message.robot.nextRetryAt = null;
+      persist();
+      render();
+
+      try {
+        const payload = { msg_type: "text", content: { text: [message.title, message.content].filter(Boolean).join("\n") } };
+        const response = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Accept: "application/json" },
+          body: JSON.stringify({ url: state.config.notificationUrl, payload }),
+          signal: controller.signal,
+        });
+        const rawBody = await response.text();
+        let result;
+        try { result = rawBody ? JSON.parse(rawBody) : {}; } catch { result = { rawBody }; }
+        message.robot.response = result;
+        if (!response.ok || result.success !== true) throw new Error(result.error || `HTTP ${response.status}`);
+        if (message.readAt || !state.messages.includes(message)) return;
+        message.robot.status = "success";
+        message.robot.sentAt = Date.now();
+        message.robot.nextRetryAt = null;
+      } catch (error) {
+        if (controller.signal.aborted || message.readAt || !state.messages.includes(message)) return;
+        message.robot.status = "failed";
+        message.robot.lastError = error instanceof Error ? error.message : String(error);
+        message.robot.nextRetryAt = Date.now() + retryDelay(message.robot.attempts);
+      } finally {
+        activeRobotRequests.delete(message.id);
+        if (state.messages.includes(message)) {
+          if (message.readAt && message.robot.status !== "success") cancelRobotDelivery(message);
+          persist();
+          render();
+        }
+        scheduleRobotDeliveries();
+      }
+    }
+
+    function scheduleRobotDeliveries() {
+      if (activeRobotRequests.size) return;
+      const now = Date.now();
+      const nextMessage = state.messages.find(message => isSendableMessage(message, now));
+      if (!nextMessage) return;
+      const waitMs = Math.max(0, nextRobotSendAt - now);
+      if (waitMs > 0) {
+        if (!robotDispatchTimer) {
+          robotDispatchTimer = setTimeout(() => {
+            robotDispatchTimer = null;
+            scheduleRobotDeliveries();
+          }, waitMs);
+        }
+        return;
+      }
+      nextRobotSendAt = now + ROBOT_SEND_MIN_INTERVAL_MS;
+      deliverRobotMessage(nextMessage);
+    }
+
+    function render() {
+      if (!state.items.length) {
+        appList.innerHTML = '<div class="empty-state">还没有监测应用。添加一个包名后，会立即进行首次检测。</div>';
+      } else {
+        appList.innerHTML = state.items.map(renderApp).join("");
+      }
+      renderMessages();
+    }
+
+    function renderMessages() {
+      const unreadCount = state.messages.filter(message => !message.readAt).length;
+      dashboard.classList.toggle("messages-collapsed", !state.messagesExpanded);
+      globalMessages.innerHTML = `
+        <div class="messages-head">
+          <button class="collapse-button" data-global-action="toggle-messages" aria-label="${state.messagesExpanded ? "向右收起消息列表" : "展开消息列表"}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="${state.messagesExpanded ? "M9 5l7 7-7 7" : "m15 5-7 7 7 7"}"/></svg></button>
+          <div class="messages-title">
+            <span class="message-symbol" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5.5h16v13H4z"/><path d="m4.5 7 7.5 5.6L19.5 7"/></svg></span>
+            <span class="message-label">消息列表</span>
+            ${unreadCount ? `<span class="unread" title="${unreadCount} 条未读消息">${unreadCount}</span>` : ""}
+          </div>
+          <div class="messages-tools">
+            ${state.messages.length && state.messagesExpanded ? `${unreadCount ? '<button class="text-button" data-global-action="read-all">全部已读</button>' : ""}<button class="text-button danger" data-global-action="clear-all">清空全部</button>` : ""}
+          </div>
+        </div>
+        ${state.messagesExpanded ? `<div class="message-list">${state.messages.length ? state.messages.map(renderMessage).join("") : '<p class="message-empty">暂无消息。</p>'}</div>` : ""}
+      `;
+    }
+
+    function renderApp(item) {
+      const [statusText, statusClass] = statusDisplay(item);
+      const dependentDisabled = !item.monitorEnabled;
+      const intervalInputValue = item.intervalDraft ?? item.intervalValue;
+      const minimumInterval = minimumIntervalValue(item.intervalUnit);
+      return `
+        <article class="app-card" data-id="${item.id}">
+          <div class="drag-handle" role="button" aria-label="拖动排序" title="按住拖动排序"><svg viewBox="0 0 8 20" aria-hidden="true"><circle cx="2" cy="3" r="1.2"/><circle cx="6" cy="3" r="1.2"/><circle cx="2" cy="10" r="1.2"/><circle cx="6" cy="10" r="1.2"/><circle cx="2" cy="17" r="1.2"/><circle cx="6" cy="17" r="1.2"/></svg></div>
+          <div class="app-main">
+            <div class="app-top">
+              <h3><span>${escapeHtml(item.code || "未编号")}</span><span class="app-code">${escapeHtml(item.packageName || "未填写包名")}</span><span class="state ${statusClass}">${statusText}</span></h3>
+              <div class="app-actions">
+                <button class="icon-button ${item.checking ? "is-spinning" : ""}" data-action="check-now" ${item.checking ? "disabled" : ""} aria-label="${item.checking ? "正在检测" : "刷新检测"}" title="${item.checking ? "正在检测" : "刷新检测"}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 0 1 15.5-6.2L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15.5 6.2L3 16"/><path d="M8 16H3v5"/></svg></button>
+                <button class="icon-button delete" data-action="delete-app" aria-label="删除监测项" title="删除监测项"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"/><path d="M10 11v6M14 11v6"/><path d="M6 7l1 13h10l1-13"/><path d="M9 7V4h6v3"/></svg></button>
+              </div>
+            </div>
+            <div class="version-info"><span>在线版本</span><strong>${escapeHtml(versionDisplay(item.versionName))}</strong><span class="info-divider" aria-hidden="true"></span><span>上次更新时间</span><strong>${escapeHtml(item.lastUpdatedText || "未知")}</strong></div>
+            <div class="fields">
+              <label>编号<input data-field="code" maxlength="80" value="${escapeHtml(item.code)}" placeholder="例如：GP-001"></label>
+              <label>包名<input data-field="packageName" value="${escapeHtml(item.packageName)}" placeholder="com.example.app"></label>
+              <label>检测间隔<div class="interval-field"><input data-field="intervalValue" type="number" min="${minimumInterval}" step="1" value="${escapeHtml(intervalInputValue)}" title="输入后按 Enter 确认"><select data-field="intervalUnit"><option value="seconds" ${item.intervalUnit === "seconds" ? "selected" : ""}>秒</option><option value="minutes" ${item.intervalUnit === "minutes" ? "selected" : ""}>分钟</option><option value="hours" ${item.intervalUnit === "hours" ? "selected" : ""}>小时</option></select>${item.intervalHint ? `<span class="interval-feedback" role="status">${escapeHtml(item.intervalHint)}</span>` : ""}</div></label>
+            </div>
+            ${item.lastSuccessfulAt ? `<div class="refresh-time">上次刷新 ${formatRefreshTime(item.lastSuccessfulAt)}</div>` : ""}
+            <div class="switches">
+              ${renderSwitch("monitorEnabled", "基础状态监测", item.monitorEnabled, false)}
+              ${renderSwitch("onlineAlertEnabled", "上线提醒", item.onlineAlertEnabled, dependentDisabled)}
+              ${renderSwitch("offlineAlertEnabled", "离线提醒", item.offlineAlertEnabled, dependentDisabled)}
+              ${renderSwitch("versionChangeAlertEnabled", "版本变更提醒", item.versionChangeAlertEnabled, dependentDisabled)}
+            </div>
+          </div>
+        </article>`;
+    }
+
+    function renderSwitch(field, label, checked, disabled) {
+      return `<label class="switch ${disabled ? "is-disabled" : ""}"><input type="checkbox" data-field="${field}" ${checked ? "checked" : ""} ${disabled ? "disabled" : ""}><span class="switch-track"></span>${label}</label>`;
+    }
+
+    function renderMessage(message) {
+      const response = message.showRobotResponse ? robotResponseDisplay(message.robot.response) : "";
+      return `<div class="message ${message.readAt ? "is-read" : ""}"><strong>${escapeHtml(message.title)}</strong><div class="message-actions">${message.readAt ? '<span class="delivery-state cancelled">已读</span>' : '<button class="text-button" data-global-action="read-message" data-message-id="' + message.id + '">已读</button>'}<button class="text-button danger" data-global-action="clear-message" data-message-id="${message.id}">删除</button></div><p>${escapeHtml(message.content)}</p><div class="message-meta"><span class="delivery-state ${robotStateClass(message)}">${escapeHtml(robotStateLabel(message))}</span>${message.robot.lastError ? `<span title="${escapeHtml(message.robot.lastError)}">${escapeHtml(message.robot.lastError)}</span>` : ""}</div>${response ? `<pre class="delivery-response">${escapeHtml(response)}</pre>` : ""}<time>${formatTime(message.createdAt)}</time></div>`;
+    }
+
+    function addMessage(_item, title, content, options = {}) {
+      const message = normalizeMessage({ id: crypto.randomUUID(), title, content, createdAt: Date.now(), readAt: null, showRobotResponse: options.showRobotResponse === true, robot: createRobotState() });
+      state.messages.unshift(message);
+      persist();
+      scheduleRobotDeliveries();
+      return message;
+    }
+
+    function messageContext(item, versionName = item.versionName) {
+      return `编号：${item.code || "未填写"}；包名：${item.packageName}；版本：${versionDisplay(versionName)}；更新时间：${item.lastUpdatedText || "未知"}`;
+    }
+
+    function applyInspection(item, data) {
+      const detectedStatus = data.online === true ? "online" : data.online === false ? "offline" : "unknown";
+      item.checking = false;
+      item.lastAttemptAt = Date.now();
+      item.lastError = data.error || "";
+      if (detectedStatus === "unknown") {
+        item.status = "unknown";
+        return;
+      }
+
+      const previousStatus = item.lastDetectedStatus;
+      const previousUpdatedText = item.lastUpdatedText;
+      item.status = detectedStatus;
+      item.lastDetectedStatus = detectedStatus;
+      item.lastSuccessfulAt = Date.now();
+      // 离线详情页没有可解析版本，保留最后一次在线版本供状态与离线提醒使用。
+      if (detectedStatus === "online") {
+        item.versionName = data.version;
+        if (data.updatedOn) item.lastUpdatedText = data.updatedOn;
+      }
+
+      if (item.monitorEnabled && detectedStatus === "online" && previousStatus === "offline" && item.onlineAlertEnabled) {
+        addMessage(item, "应用已上线", messageContext(item));
+      }
+      if (item.monitorEnabled && detectedStatus === "offline" && previousStatus === "online" && item.offlineAlertEnabled) {
+        addMessage(item, "应用已离线", messageContext(item));
+      }
+      if (item.monitorEnabled && item.versionChangeAlertEnabled && detectedStatus === "online" && previousUpdatedText && data.updatedOn && previousUpdatedText !== data.updatedOn) {
+        addMessage(item, "应用版本变更", `${messageContext(item)}；上次更新时间：${previousUpdatedText}`);
+      }
+    }
+
+    async function checkApp(item, force = false) {
+      if (!item || item.checking || (!force && !item.monitorEnabled) || !item.packageName) return;
+      const requestedPackageName = item.packageName;
+      item.checking = true;
+      render();
+      try {
+        const data = await GPChecker.inspectApp(requestedPackageName, { proxyUrl: state.config.proxyUrl, cacheTtlMs: 0 });
+        if (!state.items.includes(item) || item.packageName !== requestedPackageName) return;
+        applyInspection(item, data);
+      } catch (error) {
+        if (!state.items.includes(item) || item.packageName !== requestedPackageName) return;
+        item.checking = false;
+        item.status = "unknown";
+        item.lastAttemptAt = Date.now();
+        item.lastError = error instanceof Error ? error.message : String(error);
+      }
+      persist();
+      render();
+    }
+
+    function resetDetection(item) {
+      Object.assign(item, {
+        status: "unknown", lastDetectedStatus: null, versionName: "", lastUpdatedText: "", lastSuccessfulAt: null, lastAttemptAt: null, lastError: "", checking: false,
+      });
+    }
+
+    function updateField(item, field, value, inputType) {
+      if (field === "intervalUnit") {
+        item.intervalUnit = ["seconds", "minutes", "hours"].includes(value) ? value : "minutes";
+        const minimum = minimumIntervalValue(item.intervalUnit);
+        if (item.intervalValue < minimum) {
+          item.intervalValue = minimum;
+          showIntervalHint(item, "已调整为最小 " + minimumIntervalLabel(item.intervalUnit));
+        } else clearIntervalHint(item);
+        item.intervalDraft = null;
+      }
+      else if (inputType === "checkbox") item[field] = Boolean(value);
+      else item[field] = String(value).trim();
+    }
+
+    function commitIntervalValue(item, rawValue) {
+      const numericValue = Number(rawValue);
+      const minimum = minimumIntervalValue(item.intervalUnit);
+      const needsCorrection = !Number.isFinite(numericValue) || numericValue < minimum;
+      item.intervalValue = needsCorrection ? minimum : numericValue;
+      item.intervalDraft = null;
+      if (needsCorrection) showIntervalHint(item, "已调整为最小 " + minimumIntervalLabel(item.intervalUnit));
+      else clearIntervalHint(item);
+      persist();
+      render();
+    }
+
+    addForm.addEventListener("submit", event => {
+      event.preventDefault();
+      addError.textContent = "";
+      const code = document.querySelector("#new-code").value.trim();
+      const packageName = document.querySelector("#new-package").value.trim();
+      if (!code || !packageName) { addError.textContent = "请填写编号和包名。"; return; }
+      try {
+        GPChecker.buildDetailsUrl(packageName);
+      } catch (error) {
+        addError.textContent = error.message;
+        return;
+      }
+      if (state.items.some(item => item.packageName.toLowerCase() === packageName.toLowerCase())) {
+        addError.textContent = "该包名已在监测列表中。";
+        return;
+      }
+      const item = { ...DEFAULT_APP(), code, packageName };
+      state.items.unshift(item);
+      persist();
+      render();
+      addForm.reset();
+      checkApp(item, true);
+    });
+
+    [notificationUrlInput, proxyUrlInput].forEach(input => {
+      input.addEventListener("change", () => {
+        state.config.notificationUrl = notificationUrlInput.value.trim();
+        state.config.proxyUrl = proxyUrlInput.value.trim();
+        if (input === notificationUrlInput) {
+          for (const message of state.messages) {
+            if (!message.readAt && ["not-configured", "failed", "pending"].includes(message.robot.status)) {
+              message.robot.status = state.config.notificationUrl ? "pending" : "not-configured";
+              message.robot.nextRetryAt = null;
+            }
+          }
+          setConfigFeedback(state.config.notificationUrl ? "通知地址已保存，未读消息将自动发送。" : "未配置机器人地址，新增消息不会发送。", false);
+          scheduleRobotDeliveries();
+        }
+        GPChecker.clearCache();
+        persist();
+      });
+    });
+
+    testRobotButton.addEventListener("click", () => {
+      if (!state.config.notificationUrl) {
+        setConfigFeedback("请先填写并保存飞书机器人通知 URL。", true);
+        return;
+      }
+      addMessage(null, "机器人消息测试", "这是一条由“发送测试提醒”创建的测试消息。", { showRobotResponse: true });
+      setConfigFeedback("测试提醒已创建，正在发送；机器人返回数据会显示在该消息中。", false);
+      persist();
+      render();
+    });
+
+    appList.addEventListener("click", event => {
+      const button = event.target.closest("[data-action]");
+      if (!button) return;
+      const card = button.closest(".app-card");
+      const item = card && getApp(card.dataset.id);
+      if (!item) return;
+      switch (button.dataset.action) {
+        case "check-now": checkApp(item, true); break;
+        case "delete-app":
+          openDeleteDialog(item);
+          break;
+        default: break;
+      }
+    });
+
+    appList.addEventListener("pointerdown", event => {
+      if (event.button !== 0 || activeSortDrag) return;
+      const handle = event.target.closest(".drag-handle");
+      const card = handle?.closest(".app-card");
+      if (!card) return;
+      const bounds = card.getBoundingClientRect();
+      const placeholder = document.createElement("div");
+      placeholder.className = "drag-placeholder";
+      placeholder.style.height = bounds.height + "px";
+      card.after(placeholder);
+      activeSortDrag = {
+        card,
+        handle,
+        placeholder,
+        pointerId: event.pointerId,
+        offsetX: event.clientX - bounds.left,
+        offsetY: event.clientY - bounds.top,
+        lastPointerY: event.clientY,
+        direction: 0,
+      };
+      card.style.width = bounds.width + "px";
+      card.style.left = bounds.left + "px";
+      card.style.top = bounds.top + "px";
+      card.classList.add("is-dragging");
+      document.body.classList.add("is-sorting");
+      handle.setPointerCapture(event.pointerId);
+      event.preventDefault();
+    });
+
+    appList.addEventListener("pointermove", event => {
+      if (!activeSortDrag || event.pointerId !== activeSortDrag.pointerId) return;
+      event.preventDefault();
+      const pointerDeltaY = event.clientY - activeSortDrag.lastPointerY;
+      if (pointerDeltaY !== 0) activeSortDrag.direction = Math.sign(pointerDeltaY);
+      activeSortDrag.lastPointerY = event.clientY;
+      activeSortDrag.card.style.left = event.clientX - activeSortDrag.offsetX + "px";
+      activeSortDrag.card.style.top = event.clientY - activeSortDrag.offsetY + "px";
+      moveSortPlaceholder();
+    });
+
+    appList.addEventListener("pointerup", event => {
+      if (!activeSortDrag || event.pointerId !== activeSortDrag.pointerId) return;
+      finishSortDrag(true);
+    });
+
+    appList.addEventListener("pointercancel", event => {
+      if (!activeSortDrag || event.pointerId !== activeSortDrag.pointerId) return;
+      finishSortDrag(false);
+    });
+
+    globalMessages.addEventListener("click", event => {
+      const button = event.target.closest("[data-global-action]");
+      if (!button) return;
+      switch (button.dataset.globalAction) {
+        case "toggle-messages":
+          state.messagesExpanded = !state.messagesExpanded;
+          break;
+        case "read-message": {
+          const message = getMessage(button.dataset.messageId);
+          if (message) markMessageRead(message);
+          return;
+        }
+        case "clear-message": {
+          const message = getMessage(button.dataset.messageId);
+          if (message) deleteMessage(message);
+          return;
+        }
+        case "read-all":
+          for (const message of state.messages) if (!message.readAt) {
+            message.readAt = Date.now();
+            cancelRobotDelivery(message);
+          }
+          break;
+        case "clear-all":
+          for (const message of state.messages) cancelRobotDelivery(message);
+          state.messages = [];
+          break;
+        default:
+          return;
+      }
+      persist();
+      render();
+    });
+
+    appList.addEventListener("input", event => {
+      const input = event.target.closest('[data-field="intervalValue"]');
+      const card = input?.closest(".app-card");
+      const item = card && getApp(card.dataset.id);
+      if (item) item.intervalDraft = input.value;
+    });
+
+    appList.addEventListener("keydown", event => {
+      const input = event.target.closest('[data-field="intervalValue"]');
+      if (!input || event.key !== "Enter") return;
+      const card = input.closest(".app-card");
+      const item = card && getApp(card.dataset.id);
+      if (!item) return;
+      event.preventDefault();
+      commitIntervalValue(item, input.value);
+    });
+
+    appList.addEventListener("focusout", event => {
+      const input = event.target.closest('[data-field="intervalValue"]');
+      if (!input || input.value !== "") return;
+      const card = input.closest(".app-card");
+      const item = card && getApp(card.dataset.id);
+      if (item) commitIntervalValue(item, "");
+    });
+
+    deleteDialog.addEventListener("click", event => {
+      const button = event.target.closest("[data-dialog-action]");
+      if (button?.dataset.dialogAction === "confirm" && pendingDeleteId) {
+        state.items = state.items.filter(item => item.id !== pendingDeleteId);
+        closeDeleteDialog();
+        persist();
+        render();
+      } else if (button?.dataset.dialogAction === "cancel" || event.target === deleteDialog) {
+        closeDeleteDialog();
+      }
+    });
+
+    document.addEventListener("keydown", event => {
+      if (!deleteDialog.hidden && event.key === "Escape") {
+        event.preventDefault();
+        closeDeleteDialog();
+      }
+    });
+
+    appList.addEventListener("change", event => {
+      const input = event.target.closest("[data-field]");
+      if (input?.dataset.field === "intervalValue") return;
+      const card = input?.closest(".app-card");
+      const item = card && getApp(card.dataset.id);
+      if (!item) return;
+      const field = input.dataset.field;
+      const oldPackageName = item.packageName;
+      updateField(item, field, input.type === "checkbox" ? input.checked : input.value, input.type);
+      if (field === "packageName" && item.packageName !== oldPackageName) {
+        try {
+          GPChecker.buildDetailsUrl(item.packageName);
+          resetDetection(item);
+        } catch {
+          item.packageName = oldPackageName;
+        }
+      }
+      if (field === "monitorEnabled" && item.monitorEnabled) item.lastAttemptAt = null;
+      persist();
+      render();
+    });
+
+    setInterval(() => {
+      const now = Date.now();
+      for (const item of state.items) {
+        const due = !item.lastAttemptAt || now - item.lastAttemptAt >= intervalMilliseconds(item);
+        if (item.monitorEnabled && !item.checking && due) checkApp(item);
+      }
+      scheduleRobotDeliveries();
+    }, 1_000);
+
+    render();
+    scheduleRobotDeliveries();
+  </script>
+</body>
+</html>
