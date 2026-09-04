@@ -18,15 +18,23 @@ const maxNotificationBodyBytes = 64 * 1024;
 const appInfoCacheTtlMs = 5 * 60 * 1_000;
 const appInfoCache = new Map();
 const appInfoRequests = new Map();
+const mockReferrerTargetOrigin = "https://mock-ref-01a06744.jeffchen001218.chatgpt.site";
 
 let scraperClient = null;
 let scraperLoadError = "";
+let qrCode = null;
+let qrCodeLoadError = "";
 try {
   // 该库是经过类型校验与每日契约测试维护的 Google Play 公开信息解析器。
   const scraper = require("@mradex77/google-play-scraper").default;
   scraperClient = scraper.createClient({ lang: "en", country: "us", throttle: 1 });
 } catch (error) {
   scraperLoadError = error instanceof Error ? error.message : String(error);
+}
+try {
+  qrCode = require("qrcode");
+} catch (error) {
+  qrCodeLoadError = error instanceof Error ? error.message : String(error);
 }
 
 function send(response, status, body, headers = {}) {
@@ -63,6 +71,39 @@ function httpsUrl(value) {
   }
 }
 
+function normalizedDetailValue(value, depth = 0) {
+  if (depth > 3 || value === null || value === undefined) return null;
+  if (typeof value === "string") return value.trim().slice(0, 12_000) || null;
+  if (typeof value === "number") return Number.isFinite(value) ? value : null;
+  if (typeof value === "boolean") return value;
+  if (Array.isArray(value)) {
+    const values = value.slice(0, 50).map(item => normalizedDetailValue(item, depth + 1)).filter(item => item !== null);
+    return values.length ? values : null;
+  }
+  if (typeof value === "object") {
+    const entries = Object.entries(value).slice(0, 50)
+      .map(([key, item]) => [key, normalizedDetailValue(item, depth + 1)])
+      .filter(([, item]) => item !== null);
+    return entries.length ? Object.fromEntries(entries) : null;
+  }
+  return null;
+}
+
+function normalizedAppDetails(app) {
+  const hiddenFields = new Set([
+    "title", "icon", "version", "updated", "appId",
+    "descriptionHTML", "minInstalls", "maxInstalls", "price", "currency", "priceText", "free", "histogram",
+    "developerInternalID", "developerId", "genreId", "categories", "contentRating", "preregister", "isAvailableInPlayPass", "androidVersionText",
+  ]);
+  const details = {};
+  for (const [key, value] of Object.entries(app || {})) {
+    if (hiddenFields.has(key)) continue;
+    const normalized = normalizedDetailValue(value);
+    if (normalized !== null) details[key] = normalized;
+  }
+  return details;
+}
+
 function normalizedAppInfo(app) {
   const updated = Number(app?.updated);
   return {
@@ -76,7 +117,18 @@ function normalizedAppInfo(app) {
     genre: textValue(app?.genre, 120),
     installs: textValue(app?.installs, 80),
     score: Number.isFinite(app?.score) ? app.score : null,
+    details: normalizedAppDetails(app),
   };
+}
+
+function validateMockReferrerUrl(rawUrl) {
+  const url = new URL(rawUrl);
+  if (url.origin !== mockReferrerTargetOrigin || url.pathname !== "/") {
+    throw new Error("二维码仅支持指定的模拟 referrer 页面。");
+  }
+  validatePackageName(url.searchParams.get("packageName"));
+  if (!url.searchParams.has("referrer")) throw new Error("模拟 referrer 链接缺少 referrer 参数。");
+  return url;
 }
 
 function withTimeout(promise, timeoutMs, message) {
@@ -217,6 +269,26 @@ const server = http.createServer(async (request, response) => {
       send(response, 200, JSON.stringify({ success: true, data }), { "content-type": "application/json; charset=utf-8" });
     } catch (error) {
       send(response, scraperClient ? 502 : 503, JSON.stringify({ success: false, error: error instanceof Error ? error.message : String(error) }), { "content-type": "application/json; charset=utf-8" });
+    }
+    return;
+  }
+
+  if (requestUrl.pathname === "/api/qr") {
+    try {
+      if (!qrCode) throw new Error(`二维码生成器不可用：${qrCodeLoadError || "依赖未安装"}`);
+      const targetUrl = validateMockReferrerUrl(requestUrl.searchParams.get("url") || "");
+      const svg = await qrCode.toString(targetUrl.toString(), {
+        type: "svg",
+        // URL 不变时，降低纠错级别可减少模块数量；SVG 再由前端放大，提升扫码容错。
+        errorCorrectionLevel: "L",
+        margin: 2,
+      });
+      send(response, 200, svg, {
+        "content-type": "image/svg+xml; charset=utf-8",
+        "content-security-policy": "default-src 'none'; style-src 'unsafe-inline'",
+      });
+    } catch (error) {
+      send(response, qrCode ? 400 : 503, error instanceof Error ? error.message : String(error));
     }
     return;
   }

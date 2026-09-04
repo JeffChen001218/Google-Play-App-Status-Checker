@@ -9,7 +9,7 @@ if ! command -v node >/dev/null 2>&1; then
   exit 1
 fi
 
-if [ ! -d "node_modules/@mradex77/google-play-scraper" ]; then
+if [ ! -d "node_modules/@mradex77/google-play-scraper" ] || [ ! -d "node_modules/qrcode" ]; then
   echo "首次启动，正在安装已锁定的解析依赖…"
   npm ci --no-audit --no-fund
 fi

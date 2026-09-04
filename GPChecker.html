@@ -86,6 +86,8 @@
     .text-button { border: 0; padding: 3px 0; color: var(--brand-dark); background: transparent; font-size: 13px; font-weight: 750; }
     .text-button:hover { color: var(--brand); }
     .text-button.danger { color: var(--danger); }
+    .details-button { padding: 1px 0; color: #526274; font-size: 12px; font-weight: 400; line-height: 1.35; text-decoration-line: underline; text-decoration-style: dashed; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+    .details-button:hover { color: #334155; }
 
     .list { display: grid; gap: 16px; }
     .empty-state { padding: 48px 20px; border: 1px dashed #cbd5e1; border-radius: 16px; color: var(--muted); text-align: center; background: rgb(255 255 255 / 55%); }
@@ -106,6 +108,8 @@
     .app-icon-fallback svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.7; }
     .app-top h3 { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
     .app-code { color: #475569; font-size: 13px; font-weight: 750; }
+    .package-copy { border: 0; padding: 0; color: #475569; background: transparent; cursor: copy; font-size: 13px; font-weight: 750; }
+    .package-copy:hover, .package-copy.is-copied, .details-package.is-copied { color: var(--brand-dark); }
     .app-actions { display: flex; gap: 9px; align-items: center; }
 
     .version-info { display: flex; align-items: baseline; flex-wrap: wrap; gap: 7px 10px; margin-bottom: 16px; padding: 9px 12px; border: 1px solid var(--line); border-radius: 10px; background: #fbfcfe; }
@@ -183,6 +187,56 @@
     .confirm-dialog h2 { font-size: 18px; }
     .confirm-dialog p { margin: 11px 0 0; color: #536174; line-height: 1.6; word-break: break-word; }
     .confirm-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; }
+    .details-dialog { display: flex; width: min(100%, 860px); max-height: min(780px, calc(100vh - 40px)); flex-direction: column; overflow: hidden; border: 1px solid rgb(255 255 255 / 50%); border-radius: 18px; box-shadow: 0 24px 70px rgb(15 23 42 / 28%); background: #fff; }
+    .details-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px 20px 14px; border-bottom: 1px solid var(--line); }
+    .details-title { display: flex; min-width: 0; align-items: center; gap: 10px; }
+    .details-title .app-icon { width: 34px; height: 34px; flex-basis: 34px; border-radius: 9px; }
+    .details-title-text { min-width: 0; }
+    .details-head h2 { min-width: 0; overflow: hidden; font-size: 17px; text-overflow: ellipsis; white-space: nowrap; }
+    .details-package { max-width: 100%; margin-top: 2px; overflow: hidden; border: 0; padding: 0; color: #64748b; background: transparent; cursor: copy; font-size: 12px; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
+    .details-package:hover { color: var(--brand-dark); }
+    .details-close { flex: 0 0 auto; }
+    .details-body { min-height: 0; flex: 1 1 auto; padding: 18px 20px 22px; overflow: auto; overscroll-behavior: contain; }
+    .details-section { min-width: 0; }
+    .details-section + .details-section { margin-top: 18px; }
+    .details-section h3 { margin: 0 0 10px; color: #334155; font-size: 13px; }
+    .details-grid { margin: 0; }
+    .detail-row { display: flex; min-width: 0; gap: 16px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+    .detail-row:first-child { border-top: 1px solid var(--line); }
+    .detail-row dt { width: 142px; flex: 0 0 142px; margin: 0; color: var(--muted); font-size: 12px; font-weight: 650; }
+    .detail-row dd { min-width: 0; flex: 1; margin: 0; color: #1e293b; font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; white-space: pre-wrap; }
+    .detail-row dd a { color: var(--brand-dark); font-weight: 700; text-decoration: none; }
+    .detail-row dd a:hover { text-decoration: underline; }
+    .detail-description { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
+    .detail-description.is-expanded { display: block; }
+    .description-toggle { margin-top: 5px; border: 0; padding: 0; color: #526274; background: transparent; font-size: 12px; line-height: 1.4; text-decoration: underline; text-decoration-style: dashed; text-underline-offset: 3px; }
+    .description-toggle:hover { color: var(--brand-dark); }
+    .description-toggle[hidden] { display: none; }
+    .detail-list { margin: 0; padding-left: 18px; }
+    .detail-list li + li { margin-top: 5px; }
+    .detail-object { margin: 0; }
+    .detail-object dt { margin-top: 6px; color: var(--muted); font-size: 11px; }
+    .detail-object dd { margin: 1px 0 0; }
+    .preview-strip { display: flex; gap: 10px; padding-bottom: 3px; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; }
+    .preview-strip::-webkit-scrollbar { display: none; }
+    .preview-strip img { display: block; width: auto; max-width: none; height: 132px; flex: 0 0 auto; border: 1px solid var(--line); border-radius: 10px; background: #f8fafc; object-fit: contain; }
+    .preview-strip img.is-unavailable { display: none; }
+    .referrer-card { display: inline-flex; max-width: 100%; gap: 12px; align-items: center; border: 1px solid #bfdbfe; border-radius: 12px; padding: 10px; background: #f8fbff; }
+    .referrer-qr-trigger { display: block; width: 82px; height: 82px; flex: 0 0 82px; border-radius: 7px; outline: none; cursor: zoom-in; }
+    .referrer-qr-trigger:focus-visible { outline: 3px solid rgb(20 184 166 / 24%); outline-offset: 2px; }
+    .referrer-qr { display: block; width: 82px; height: 82px; border: 1px solid #dbeafe; border-radius: 7px; background: #fff; }
+    .referrer-copy { min-width: 0; }
+    .referrer-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+    .referrer-action { border: 0; padding: 0; color: #64748b; background: transparent; font-size: 13px; font-weight: 500; line-height: 1.5; text-decoration: none; }
+    .referrer-action:hover { color: var(--brand-dark); }
+    .referrer-copy-button { border: 1px solid #cbd5e1; border-radius: 7px; padding: 5px 8px; color: #526274; background: #fff; font-size: 12px; font-weight: 550; line-height: 1.35; }
+    .referrer-copy-button:hover { border-color: #94a3b8; color: #334155; background: #f8fafc; }
+    .detail-empty { margin: 0; color: var(--muted); font-size: 13px; }
+    .copy-tip { position: fixed; z-index: 1200; max-width: min(260px, calc(100vw - 24px)); border: 1px solid #bfdbfe; border-radius: 8px; padding: 6px 9px; color: #1e3a5f; background: #eff6ff; box-shadow: 0 8px 20px rgb(30 58 95 / 16%); font-size: 12px; font-weight: 650; line-height: 1.35; pointer-events: none; transform: translateX(-50%); }
+    .copy-tip[hidden] { display: none; }
+    .qr-preview { position: fixed; z-index: 1300; width: 280px; height: 280px; border: 1px solid #bfdbfe; border-radius: 12px; padding: 8px; box-shadow: 0 18px 44px rgb(15 23 42 / 28%); background: #fff; pointer-events: none; }
+    .qr-preview[hidden] { display: none; }
+    .qr-preview img { display: block; width: 100%; height: 100%; }
 
     @media (max-width: 800px) {
       .dashboard, .dashboard.messages-collapsed { grid-template-columns: 1fr; }
@@ -194,6 +248,7 @@
       .dashboard.messages-collapsed .unread { position: static; min-width: 19px; height: 19px; padding: 0 6px; font-size: 11px; }
       .dashboard.messages-collapsed .messages-tools { display: flex; }
       .fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .detail-row { gap: 12px; }
     }
     @media (max-width: 580px) {
       .shell { width: min(100% - 20px, 1180px); padding-top: 20px; }
@@ -204,6 +259,11 @@
       .app-actions { margin-top: 13px; }
       .switches { display: grid; grid-template-columns: 1fr; }
       .switch-group { gap: 8px 12px; }
+      .detail-row { display: block; }
+      .detail-row dt { width: auto; margin-bottom: 4px; }
+      .preview-strip img { height: 80px; }
+      .referrer-card { display: block; }
+      .referrer-qr-trigger, .referrer-qr { width: 82px; height: 82px; }
     }
   </style>
 </head>
@@ -223,9 +283,10 @@
       <div class="config-body">
         <div class="config-grid">
           <label>飞书机器人通知 URL<input id="notification-url" type="url" placeholder="https://open.feishu.cn/open-apis/bot/v2/hook/..."></label>
+          <label>通用模拟 referrer 参数<input id="mock-referrer" maxlength="1000" placeholder="例如：utm_source=gp-checker"></label>
         </div>
-        <div class="config-actions"><button id="test-robot" class="button secondary" type="button">发送测试提醒</button><span id="config-feedback" class="config-feedback" role="status"></span></div>
-        <p class="hint">运行 <code>start-gpchecker.sh</code>（macOS）或 <code>start-gpchecker.bat</code>（Windows）后，从本机地址打开页面。在线状态、版本、更新时间和图标均由本地 Node 解析服务获取；飞书通知也会经由该服务安全转发并记录返回结果。</p>
+        <div class="config-actions"><button id="test-robot" class="button secondary" type="button">发送测试提醒</button><button id="export-config" class="button secondary" type="button">导出配置</button><button id="import-config" class="button secondary" type="button">导入配置</button><input id="import-config-file" type="file" accept="application/json,.json" hidden><span id="config-feedback" class="config-feedback" role="status"></span></div>
+        <p class="hint">运行 <code>start-gpchecker.sh</code>（macOS）或 <code>start-gpchecker.bat</code>（Windows）后，从本机地址打开页面。在线状态、版本、更新时间和图标均由本地 Node 解析服务获取；飞书通知也会经由该服务安全转发并记录返回结果。导出文件会包含监测历史和消息投递状态。</p>
       </div>
     </details>
 
@@ -245,6 +306,9 @@
     </div>
   </main>
 
+  <div class="copy-tip" id="copy-tip" role="status" hidden></div>
+  <div class="qr-preview" id="qr-preview" hidden><img id="qr-preview-image" alt="模拟推广页二维码放大预览"></div>
+
   <div class="modal-backdrop" id="delete-dialog" hidden>
     <section class="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="delete-dialog-title" aria-describedby="delete-dialog-description">
       <h2 id="delete-dialog-title">删除监测项？</h2>
@@ -253,6 +317,33 @@
         <button class="button secondary" type="button" data-dialog-action="cancel">取消</button>
         <button class="button danger" type="button" data-dialog-action="confirm">确认删除</button>
       </div>
+    </section>
+  </div>
+
+  <div class="modal-backdrop" id="import-dialog" hidden>
+    <section class="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="import-dialog-title" aria-describedby="import-dialog-description">
+      <h2 id="import-dialog-title">导入配置？</h2>
+      <p id="import-dialog-description">导入将覆盖当前本地配置。</p>
+      <div class="confirm-actions">
+        <button class="button secondary" type="button" data-import-action="cancel">取消</button>
+        <button class="button danger" type="button" data-import-action="confirm">确认导入</button>
+      </div>
+    </section>
+  </div>
+
+  <div class="modal-backdrop" id="details-dialog" hidden>
+    <section class="details-dialog" role="dialog" aria-modal="true" aria-labelledby="details-dialog-title">
+      <header class="details-head">
+        <div class="details-title">
+          <span id="details-dialog-icon"></span>
+          <div class="details-title-text">
+            <h2 id="details-dialog-title">详细信息</h2>
+            <button class="details-package" id="details-dialog-package" type="button" data-details-action="copy-package" title="点击复制包名"></button>
+          </div>
+        </div>
+        <button class="icon-button details-close" type="button" data-details-action="close" aria-label="关闭详细信息" title="关闭"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button>
+      </header>
+      <div class="details-body" id="details-dialog-content"></div>
     </section>
   </div>
 
@@ -380,6 +471,9 @@
     window.GPChecker = GPChecker;
 
     const STORAGE_KEY = "gp-checker-dashboard-v1";
+    const BACKUP_FORMAT = "gp-checker-configuration";
+    const BACKUP_VERSION = 1;
+    const MAX_IMPORT_FILE_SIZE = 20 * 1024 * 1024;
     const ROBOT_RETRY_BASE_MS = 5_000;
     const ROBOT_RETRY_MAX_MS = 5 * 60_000;
     const ROBOT_SEND_MIN_INTERVAL_MS = 1_000;
@@ -414,44 +508,71 @@
     const appList = document.querySelector("#app-list");
     const globalMessages = document.querySelector("#global-messages");
     const shell = document.querySelector(".shell");
+    const copyTip = document.querySelector("#copy-tip");
+    const qrPreview = document.querySelector("#qr-preview");
+    const qrPreviewImage = document.querySelector("#qr-preview-image");
     const addForm = document.querySelector("#add-form");
     const addError = document.querySelector("#add-error");
     const notificationUrlInput = document.querySelector("#notification-url");
+    const mockReferrerInput = document.querySelector("#mock-referrer");
     const testRobotButton = document.querySelector("#test-robot");
+    const exportConfigButton = document.querySelector("#export-config");
+    const importConfigButton = document.querySelector("#import-config");
+    const importConfigFileInput = document.querySelector("#import-config-file");
     const configFeedback = document.querySelector("#config-feedback");
     const deleteDialog = document.querySelector("#delete-dialog");
     const deleteDialogDescription = document.querySelector("#delete-dialog-description");
+    const importDialog = document.querySelector("#import-dialog");
+    const importDialogDescription = document.querySelector("#import-dialog-description");
+    const detailsDialog = document.querySelector("#details-dialog");
+    const detailsDialogTitle = document.querySelector("#details-dialog-title");
+    const detailsDialogIcon = document.querySelector("#details-dialog-icon");
+    const detailsDialogPackage = document.querySelector("#details-dialog-package");
+    const detailsDialogContent = document.querySelector("#details-dialog-content");
     let pendingDeleteId = null;
+    let pendingImportedState = null;
+    let detailsItemId = null;
+    let copyTipTimer = null;
     let activeSortDrag = null;
     const activeRobotRequests = new Map();
     let nextRobotSendAt = 0;
     let robotDispatchTimer = null;
 
     notificationUrlInput.value = state.config.notificationUrl;
+    mockReferrerInput.value = state.config.mockReferrer;
 
     function isLocalServer() {
       return ["127.0.0.1", "localhost"].includes(location.hostname) && /^https?:$/.test(location.protocol);
     }
 
-    function defaultConfig() { return { notificationUrl: "" }; }
+    function defaultConfig() { return { notificationUrl: "", mockReferrer: "" }; }
 
     function loadState() {
-      const defaults = defaultConfig();
       try {
-        const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
-        if (!saved || !Array.isArray(saved.items)) throw new Error("No saved state");
-        const legacyMessages = saved.items.flatMap(item => Array.isArray(item.messages) ? item.messages : []);
-        return {
-          config: { notificationUrl: String(saved.config?.notificationUrl || "") },
-          items: saved.items.map(normalizeApp),
-          messages: (Array.isArray(saved.messages) ? saved.messages : legacyMessages)
-            .filter(Boolean).map(normalizeMessage)
-            .sort((left, right) => (Number(right.createdAt) || 0) - (Number(left.createdAt) || 0)),
-          messagesExpanded: saved.messagesExpanded !== false,
-        };
+        return normalizeSavedState(JSON.parse(localStorage.getItem(STORAGE_KEY)));
       } catch {
-        return { config: defaults, items: [], messages: [], messagesExpanded: true };
+        return emptyState();
       }
+    }
+
+    function emptyState() {
+      return { config: defaultConfig(), items: [], messages: [], messagesExpanded: true };
+    }
+
+    function normalizeSavedState(saved) {
+      if (!saved || typeof saved !== "object" || !Array.isArray(saved.items)) throw new Error("配置文件格式无效");
+      const legacyMessages = saved.items.flatMap(item => Array.isArray(item?.messages) ? item.messages : []);
+      return {
+        config: {
+          notificationUrl: String(saved.config?.notificationUrl || "").trim(),
+          mockReferrer: String(saved.config?.mockReferrer || "").trim().slice(0, 1_000),
+        },
+        items: saved.items.filter(item => item && typeof item === "object").map(normalizeApp),
+        messages: (Array.isArray(saved.messages) ? saved.messages : legacyMessages)
+          .filter(Boolean).map(normalizeMessage)
+          .sort((left, right) => (Number(right.createdAt) || 0) - (Number(left.createdAt) || 0)),
+        messagesExpanded: saved.messagesExpanded !== false,
+      };
     }
 
     function normalizeApp(value) {
@@ -481,6 +602,12 @@
         const url = new URL(String(info.icon || ""));
         if (url.protocol === "https:") icon = url.toString();
       } catch { /* 未知或旧数据使用缺省图标。 */ }
+      const normalizedDetails = normalizeDetailValue(info.details);
+      const details = normalizedDetails && !Array.isArray(normalizedDetails) && typeof normalizedDetails === "object" ? normalizedDetails : {};
+      if (!Object.keys(details).length) {
+        const legacyDetails = { source: safeText(info.source, 80), summary: safeText(info.summary, 1_000), developer: safeText(info.developer, 160), genre: safeText(info.genre, 120), installs: safeText(info.installs, 80), score: Number.isFinite(info.score) ? info.score : null };
+        for (const [key, detail] of Object.entries(legacyDetails)) if (detail !== "" && detail !== null) details[key] = detail;
+      }
       return {
         source: safeText(info.source, 80),
         title: safeText(info.title, 160),
@@ -492,7 +619,26 @@
         genre: safeText(info.genre, 120),
         installs: safeText(info.installs, 80),
         score: Number.isFinite(info.score) ? info.score : null,
+        details,
       };
+    }
+
+    function normalizeDetailValue(value, depth = 0) {
+      if (depth > 3 || value === null || value === undefined) return null;
+      if (typeof value === "string") return value.trim().slice(0, 12_000) || null;
+      if (typeof value === "number") return Number.isFinite(value) ? value : null;
+      if (typeof value === "boolean") return value;
+      if (Array.isArray(value)) {
+        const entries = value.slice(0, 50).map(entry => normalizeDetailValue(entry, depth + 1)).filter(entry => entry !== null);
+        return entries.length ? entries : null;
+      }
+      if (typeof value === "object") {
+        const entries = Object.entries(value).slice(0, 50)
+          .map(([key, entry]) => [String(key).slice(0, 80), normalizeDetailValue(entry, depth + 1)])
+          .filter(([, entry]) => entry !== null);
+        return entries.length ? Object.fromEntries(entries) : null;
+      }
+      return null;
     }
 
     function normalizeRobotState(value, hasRobotState) {
@@ -519,16 +665,48 @@
 
     function persist() {
       try {
-        const serializableItems = state.items.map(({ checking, intervalDraft, intervalHint, ...item }) => item);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify({
-          config: state.config,
-          items: serializableItems,
-          messages: state.messages,
-          messagesExpanded: state.messagesExpanded,
-        }));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(serializableState()));
       } catch (error) {
         console.warn("无法保存 GP Checker 数据", error);
       }
+    }
+
+    function serializableState() {
+      return {
+        config: state.config,
+        items: state.items.map(({ checking, intervalDraft, intervalHint, ...item }) => item),
+        messages: state.messages,
+        messagesExpanded: state.messagesExpanded,
+      };
+    }
+
+    function backupFileName() {
+      const pad = value => String(value).padStart(2, "0");
+      const now = new Date();
+      return `GPChecker-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}.json`;
+    }
+
+    function exportConfiguration() {
+      const backup = {
+        format: BACKUP_FORMAT,
+        version: BACKUP_VERSION,
+        exportedAt: new Date().toISOString(),
+        state: serializableState(),
+      };
+      const objectUrl = URL.createObjectURL(new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" }));
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = backupFileName();
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
+      setConfigFeedback("配置及历史状态已导出。", false);
+    }
+
+    function parseImportedBackup(raw) {
+      if (!raw || typeof raw !== "object" || raw.format !== BACKUP_FORMAT || raw.version !== BACKUP_VERSION) {
+        throw new Error("请选择由 GP Checker 导出的配置文件。");
+      }
+      return normalizeSavedState(raw.state);
     }
 
     function escapeHtml(value) {
@@ -591,6 +769,232 @@
       return code || fallback;
     }
 
+    function detailFieldLabel(key) {
+      const labels = {
+        source: "解析来源", description: "完整介绍", summary: "简介", installs: "安装量", minInstalls: "最低安装量", maxInstalls: "最高安装量",
+        score: "评分", scoreText: "评分文本", ratings: "评分数", reviews: "评论数", histogram: "评分分布", price: "价格", originalPrice: "原价",
+        discountEndDate: "优惠截止时间", free: "是否免费", currency: "货币", priceText: "价格文本", available: "商店可用", offersIAP: "提供应用内购", IAPRange: "内购价格范围",
+        androidVersion: "最低 Android 版本", androidVersionText: "最低 Android 版本说明", androidMaxVersion: "最高 Android 版本", developer: "开发者", developerId: "开发者 ID",
+        developerEmail: "开发者邮箱", developerWebsite: "开发者网站", developerAddress: "开发者地址", developerLegalName: "开发者法定名称", developerLegalEmail: "开发者法定邮箱",
+        developerLegalAddress: "开发者法定地址", developerLegalPhoneNumber: "开发者法定电话", privacyPolicy: "隐私政策", developerInternalID: "开发者内部 ID",
+        genre: "类别", genreId: "类别 ID", categories: "分类", headerImage: "头图", screenshots: "截图", video: "视频", videoImage: "视频封面", previewVideo: "预览视频",
+        contentRating: "内容分级", contentRatingDescription: "内容分级说明", adSupported: "包含广告", released: "发布日期", recentChanges: "最新版本说明", comments: "附加说明",
+        preregister: "支持预注册", earlyAccessEnabled: "早期体验", isAvailableInPlayPass: "Play Pass 可用", url: "Google Play 链接",
+      };
+      return labels[key] || key.replace(/([a-z])([A-Z])/g, "$1 $2");
+    }
+
+    function externalLink(value) {
+      try {
+        const url = new URL(String(value || ""));
+        return ["http:", "https:"].includes(url.protocol) ? url.toString() : "";
+      } catch {
+        return "";
+      }
+    }
+
+    function shouldDisplayDetailField(key) {
+      return !new Set([
+        "source", "descriptionHTML", "minInstalls", "maxInstalls", "price", "currency", "priceText", "free", "histogram",
+        "developerInternalID", "developerId", "genreId", "categories", "headerImage", "screenshots", "contentRating", "preregister", "isAvailableInPlayPass", "androidVersionText",
+      ]).has(key);
+    }
+
+    function showCopyTip(message, trigger) {
+      clearTimeout(copyTipTimer);
+      const bounds = trigger?.getBoundingClientRect();
+      const horizontalCenter = bounds ? bounds.left + bounds.width / 2 : window.innerWidth / 2;
+      copyTip.textContent = message;
+      copyTip.style.left = `${Math.min(Math.max(horizontalCenter, 110), window.innerWidth - 110)}px`;
+      copyTip.style.top = `${Math.min((bounds?.bottom || 12) + 8, window.innerHeight - 44)}px`;
+      copyTip.hidden = false;
+      copyTipTimer = setTimeout(() => { copyTip.hidden = true; }, 1_500);
+    }
+
+    async function copyText(value, trigger, successMessage) {
+      const text = String(value || "").trim();
+      if (!text) return;
+      try {
+        let copied = false;
+        if (navigator.clipboard?.writeText) {
+          try {
+            await navigator.clipboard.writeText(text);
+            copied = true;
+          } catch { /* 回退到传统复制方式。 */ }
+        }
+        if (!copied) {
+          const temporaryInput = document.createElement("textarea");
+          temporaryInput.value = text;
+          temporaryInput.setAttribute("readonly", "");
+          temporaryInput.style.cssText = "position:fixed;opacity:0;pointer-events:none";
+          document.body.append(temporaryInput);
+          temporaryInput.select();
+          copied = document.execCommand("copy");
+          temporaryInput.remove();
+          if (!copied) throw new Error("复制失败");
+        }
+        if (trigger) {
+          const previousTitle = trigger.title;
+          trigger.title = "已复制";
+          trigger.classList.add("is-copied");
+          setTimeout(() => {
+            trigger.title = previousTitle;
+            trigger.classList.remove("is-copied");
+          }, 1_500);
+        }
+        showCopyTip(successMessage, trigger);
+      } catch {
+        if (trigger) trigger.title = "复制失败";
+        showCopyTip("复制失败", trigger);
+      }
+    }
+
+    function copyPackageName(item, trigger) {
+      return copyText(item?.packageName, trigger, "包名已复制");
+    }
+
+    function renderDetailValue(value, depth = 0) {
+      if (depth > 3 || value === null || value === undefined) return "";
+      if (typeof value === "boolean") return value ? "是" : "否";
+      if (typeof value === "number") return escapeHtml(String(value));
+      if (typeof value === "string") {
+        const link = externalLink(value);
+        return link ? `<a href="${escapeHtml(link)}" target="_blank" rel="noopener noreferrer">${escapeHtml(value)}</a>` : escapeHtml(value);
+      }
+      if (Array.isArray(value)) return `<ul class="detail-list">${value.map(entry => `<li>${renderDetailValue(entry, depth + 1)}</li>`).join("")}</ul>`;
+      if (typeof value === "object") return `<dl class="detail-object">${Object.entries(value).map(([key, entry]) => `<dt>${escapeHtml(detailFieldLabel(key))}</dt><dd>${renderDetailValue(entry, depth + 1)}</dd>`).join("")}</dl>`;
+      return "";
+    }
+
+    function buildMockReferrerUrl(item) {
+      const url = new URL("https://mock-ref-01a06744.jeffchen001218.chatgpt.site/");
+      url.searchParams.set("packageName", String(item.packageName || "").trim());
+      url.searchParams.set("referrer", String(state.config.mockReferrer || "").trim());
+      return url.toString();
+    }
+
+    function qrCodeUrl(targetUrl) {
+      if (!isLocalServer()) return "";
+      return `${location.origin}/api/qr?url=${encodeURIComponent(targetUrl)}`;
+    }
+
+    function previewImageUrls(item) {
+      const details = item.appInfo?.details && typeof item.appInfo.details === "object" && !Array.isArray(item.appInfo.details) ? item.appInfo.details : {};
+      const candidates = [details.headerImage, details.videoImage, ...(Array.isArray(details.screenshots) ? details.screenshots : [])];
+      return [...new Set(candidates.map(externalLink).filter(Boolean))];
+    }
+
+    function preparePreviewImageRetries() {
+      for (const image of detailsDialogContent.querySelectorAll("[data-preview-image]")) {
+        image.addEventListener("error", () => {
+          const retries = Number(image.dataset.retryCount || 0);
+          if (retries >= 2) {
+            image.classList.add("is-unavailable");
+            return;
+          }
+          image.dataset.retryCount = String(retries + 1);
+          setTimeout(() => {
+            const retryUrl = new URL(image.dataset.source);
+            retryUrl.searchParams.set("gpcheckerRetry", `${Date.now()}-${retries}`);
+            image.src = retryUrl.toString();
+          }, 600 * (retries + 1));
+        });
+      }
+    }
+
+    function prepareDescriptionToggles() {
+      requestAnimationFrame(() => {
+        for (const description of detailsDialogContent.querySelectorAll("[data-description-content]")) {
+          const toggle = description.parentElement?.querySelector('[data-details-action="toggle-description"]');
+          if (!toggle) continue;
+          const collapsedHeight = Math.ceil(description.getBoundingClientRect().height);
+          description.classList.add("is-expanded");
+          const expandedHeight = Math.ceil(description.getBoundingClientRect().height);
+          description.classList.remove("is-expanded");
+          const hasOverflow = expandedHeight > collapsedHeight + 1;
+          toggle.hidden = !hasOverflow;
+          if (!hasOverflow) {
+            description.classList.remove("is-expanded");
+            toggle.textContent = "展开";
+            toggle.setAttribute("aria-expanded", "false");
+          }
+        }
+      });
+    }
+
+    function showQrPreview(trigger) {
+      const image = trigger?.querySelector("img");
+      if (!image) return;
+      const bounds = trigger.getBoundingClientRect();
+      const previewSize = 298;
+      let left = bounds.right + 12;
+      if (left + previewSize > window.innerWidth - 12) left = Math.max(12, bounds.left - previewSize - 12);
+      const top = Math.min(Math.max(12, bounds.top), window.innerHeight - previewSize - 12);
+      qrPreviewImage.src = image.currentSrc || image.src;
+      qrPreview.style.left = `${left}px`;
+      qrPreview.style.top = `${top}px`;
+      qrPreview.hidden = false;
+    }
+
+    function hideQrPreview() {
+      qrPreview.hidden = true;
+    }
+
+    function renderDetailsContent(item) {
+      detailsDialogContent.innerHTML = renderDetailsDialog(item);
+      preparePreviewImageRetries();
+      prepareDescriptionToggles();
+    }
+
+    function renderDetailsDialog(item) {
+      const targetUrl = buildMockReferrerUrl(item);
+      const qrUrl = qrCodeUrl(targetUrl);
+      const details = item.appInfo?.details && typeof item.appInfo.details === "object" && !Array.isArray(item.appInfo.details) ? item.appInfo.details : {};
+      const previewUrls = previewImageUrls(item);
+      const rows = Object.entries(details).filter(([key]) => shouldDisplayDetailField(key)).map(([key, value]) => {
+        const renderedValue = renderDetailValue(value);
+        if (key === "description" && typeof value === "string" && renderedValue) {
+          return `<div class="detail-row"><dt>${escapeHtml(detailFieldLabel(key))}</dt><dd><div class="detail-description" data-description-content>${renderedValue}</div><button class="description-toggle" type="button" data-details-action="toggle-description" aria-expanded="false" hidden>展开</button></dd></div>`;
+        }
+        return `<div class="detail-row"><dt>${escapeHtml(detailFieldLabel(key))}</dt><dd>${renderedValue}</dd></div>`;
+      }).join("");
+      return `
+        ${previewUrls.length ? `<section class="details-section"><div class="preview-strip">${previewUrls.map((url, index) => `<img data-preview-image data-source="${escapeHtml(url)}" src="${escapeHtml(url)}" alt="${escapeHtml(applicationLabel(item))} 预览图 ${index + 1}">`).join("")}</div></section>` : ""}
+        <section class="details-section">
+          <h3>模拟落地页</h3>
+          <div class="referrer-card">
+            ${qrUrl ? `<span class="referrer-qr-trigger" data-qr-preview tabindex="0"><img class="referrer-qr" src="${escapeHtml(qrUrl)}" alt="模拟推广页二维码"></span>` : ""}
+            <div class="referrer-copy">
+              <div class="referrer-actions"><a class="referrer-action" href="${escapeHtml(targetUrl)}" target="_blank" rel="noopener noreferrer">跳转模拟推广页 ↗</a><button class="referrer-copy-button" type="button" data-details-action="copy-referrer">复制模拟推广页链接</button></div>
+            </div>
+          </div>
+        </section>
+        <section class="details-section">
+          <h3>详细信息</h3>
+          ${rows ? `<dl class="details-grid">${rows}</dl>` : '<p class="detail-empty">暂无补充详情。</p>'}
+        </section>`;
+    }
+
+    function openDetailsDialog(item) {
+      detailsItemId = item.id;
+      detailsDialogTitle.textContent = applicationLabel(item);
+      detailsDialogIcon.innerHTML = renderAppIcon(item);
+      detailsDialogPackage.textContent = item.packageName || "未填写包名";
+      renderDetailsContent(item);
+      shell.inert = true;
+      document.body.classList.add("modal-open");
+      detailsDialog.hidden = false;
+      detailsDialog.querySelector('[data-details-action="close"]').focus();
+    }
+
+    function closeDetailsDialog() {
+      detailsItemId = null;
+      hideQrPreview();
+      detailsDialog.hidden = true;
+      shell.inert = false;
+      document.body.classList.remove("modal-open");
+    }
+
     function openDeleteDialog(item) {
       pendingDeleteId = item.id;
       const label = [applicationLabel(item), item.packageName || "未填写包名"].join(" · ");
@@ -606,6 +1010,60 @@
       deleteDialog.hidden = true;
       shell.inert = false;
       document.body.classList.remove("modal-open");
+    }
+
+    function openImportDialog(importedState, fileName) {
+      pendingImportedState = importedState;
+      importDialogDescription.textContent = `将使用「${fileName}」覆盖当前本地配置、${importedState.items.length} 个监测项和 ${importedState.messages.length} 条消息，并恢复保存的检测与机器人投递历史。未读且尚未发送的消息会按保存状态继续投递。`;
+      shell.inert = true;
+      document.body.classList.add("modal-open");
+      importDialog.hidden = false;
+      importDialog.querySelector('[data-import-action="confirm"]').focus();
+    }
+
+    function closeImportDialog() {
+      pendingImportedState = null;
+      importDialog.hidden = true;
+      shell.inert = false;
+      document.body.classList.remove("modal-open");
+    }
+
+    function stopActiveRobotDeliveries() {
+      if (robotDispatchTimer) clearTimeout(robotDispatchTimer);
+      robotDispatchTimer = null;
+      for (const controller of activeRobotRequests.values()) controller.abort();
+      activeRobotRequests.clear();
+      nextRobotSendAt = 0;
+    }
+
+    function applyImportedState(importedState) {
+      stopActiveRobotDeliveries();
+      for (const timer of intervalHintTimers.values()) clearTimeout(timer);
+      intervalHintTimers.clear();
+      state.config = importedState.config;
+      state.items = importedState.items;
+      state.messages = importedState.messages;
+      state.messagesExpanded = importedState.messagesExpanded;
+      notificationUrlInput.value = state.config.notificationUrl;
+      mockReferrerInput.value = state.config.mockReferrer;
+      persist();
+      render();
+      scheduleRobotDeliveries();
+      setConfigFeedback("配置及历史状态已导入。", false);
+    }
+
+    async function readImportedConfiguration(file) {
+      if (!file) return;
+      if (file.size > MAX_IMPORT_FILE_SIZE) {
+        setConfigFeedback("配置文件超过 20 MB，无法导入。", true);
+        return;
+      }
+      try {
+        const importedState = parseImportedBackup(JSON.parse(await file.text()));
+        openImportDialog(importedState, file.name || "配置文件");
+      } catch (error) {
+        setConfigFeedback(error instanceof Error ? error.message : "导入失败，请检查配置文件。", true);
+      }
     }
 
     function intervalMilliseconds(item) {
@@ -869,7 +1327,7 @@
           <div class="drag-handle" role="button" aria-label="拖动排序" title="按住拖动排序"><svg viewBox="0 0 8 20" aria-hidden="true"><circle cx="2" cy="3" r="1.2"/><circle cx="6" cy="3" r="1.2"/><circle cx="2" cy="10" r="1.2"/><circle cx="6" cy="10" r="1.2"/><circle cx="2" cy="17" r="1.2"/><circle cx="6" cy="17" r="1.2"/></svg></div>
           <div class="app-main">
             <div class="app-top">
-              <div class="app-identity">${renderAppIcon(item)}<h3><span>${escapeHtml(applicationLabel(item))}</span><span class="app-code">${escapeHtml(item.packageName || "未填写包名")}</span><span class="state ${statusClass}">${statusText}</span></h3></div>
+              <div class="app-identity">${renderAppIcon(item)}<h3><span>${escapeHtml(applicationLabel(item))}</span><button class="app-code package-copy" data-action="copy-package" type="button" title="点击复制包名">${escapeHtml(item.packageName || "未填写包名")}</button><button class="text-button details-button" data-action="show-details" type="button">详细信息</button><span class="state ${statusClass}">${statusText}</span></h3></div>
               <div class="app-actions">
                 <button class="icon-button ${item.checking ? "is-spinning" : ""}" data-action="check-now" ${item.checking ? "disabled" : ""} aria-label="${item.checking ? "正在检测" : "刷新检测"}" title="${item.checking ? "正在检测" : "刷新检测"}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 0 1 15.5-6.2L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15.5 6.2L3 16"/><path d="M8 16H3v5"/></svg></button>
                 <button class="icon-button delete" data-action="delete-app" aria-label="删除监测项" title="删除监测项"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"/><path d="M10 11v6M14 11v6"/><path d="M6 7l1 13h10l1-13"/><path d="M9 7V4h6v3"/></svg></button>
@@ -1043,6 +1501,15 @@
       persist();
     });
 
+    mockReferrerInput.addEventListener("change", () => {
+      state.config.mockReferrer = mockReferrerInput.value.trim().slice(0, 1_000);
+      persist();
+      if (!detailsDialog.hidden) {
+        const item = getApp(detailsItemId);
+        if (item) renderDetailsContent(item);
+      }
+    });
+
     testRobotButton.addEventListener("click", () => {
       if (!state.config.notificationUrl) {
         setConfigFeedback("请先填写并保存飞书机器人通知 URL。", true);
@@ -1054,6 +1521,19 @@
       render();
     });
 
+    exportConfigButton.addEventListener("click", exportConfiguration);
+
+    importConfigButton.addEventListener("click", () => {
+      importConfigFileInput.value = "";
+      importConfigFileInput.click();
+    });
+
+    importConfigFileInput.addEventListener("change", () => {
+      readImportedConfiguration(importConfigFileInput.files?.[0]).finally(() => {
+        importConfigFileInput.value = "";
+      });
+    });
+
     appList.addEventListener("click", event => {
       const button = event.target.closest("[data-action]");
       if (!button) return;
@@ -1062,6 +1542,8 @@
       if (!item) return;
       switch (button.dataset.action) {
         case "check-now": checkApp(item, true); break;
+        case "copy-package": copyPackageName(item, button); break;
+        case "show-details": openDetailsDialog(item); break;
         case "delete-app":
           openDeleteDialog(item);
           break;
@@ -1190,8 +1672,65 @@
       }
     });
 
+    importDialog.addEventListener("click", event => {
+      const action = event.target.closest("[data-import-action]")?.dataset.importAction;
+      if (action === "confirm" && pendingImportedState) {
+        const importedState = pendingImportedState;
+        closeImportDialog();
+        applyImportedState(importedState);
+      } else if (action === "cancel" || event.target === importDialog) {
+        closeImportDialog();
+      }
+    });
+
+    detailsDialog.addEventListener("click", event => {
+      const action = event.target.closest("[data-details-action]")?.dataset.detailsAction;
+      if (action === "copy-package") {
+        const item = getApp(detailsItemId);
+        if (item) copyPackageName(item, event.target.closest("[data-details-action]"));
+      } else if (action === "copy-referrer") {
+        const item = getApp(detailsItemId);
+        if (item) copyText(buildMockReferrerUrl(item), event.target.closest("[data-details-action]"), "模拟推广页链接已复制");
+      } else if (action === "toggle-description") {
+        const toggle = event.target.closest("[data-details-action]");
+        const description = toggle?.previousElementSibling;
+        if (!description?.matches("[data-description-content]")) return;
+        const expanded = !description.classList.contains("is-expanded");
+        description.classList.toggle("is-expanded", expanded);
+        toggle.textContent = expanded ? "收起" : "展开";
+        toggle.setAttribute("aria-expanded", String(expanded));
+      } else if (action === "close" || event.target === detailsDialog) closeDetailsDialog();
+    });
+
+    detailsDialogContent.addEventListener("pointerover", event => {
+      const trigger = event.target.closest("[data-qr-preview]");
+      if (trigger && !trigger.contains(event.relatedTarget)) showQrPreview(trigger);
+    });
+
+    detailsDialogContent.addEventListener("pointerout", event => {
+      const trigger = event.target.closest("[data-qr-preview]");
+      if (trigger && !trigger.contains(event.relatedTarget)) hideQrPreview();
+    });
+
+    detailsDialogContent.addEventListener("focusin", event => {
+      const trigger = event.target.closest("[data-qr-preview]");
+      if (trigger) showQrPreview(trigger);
+    });
+
+    detailsDialogContent.addEventListener("focusout", event => {
+      const trigger = event.target.closest("[data-qr-preview]");
+      if (trigger && !trigger.contains(event.relatedTarget)) hideQrPreview();
+    });
+
     document.addEventListener("keydown", event => {
-      if (!deleteDialog.hidden && event.key === "Escape") {
+      if (event.key !== "Escape") return;
+      if (!detailsDialog.hidden) {
+        event.preventDefault();
+        closeDetailsDialog();
+      } else if (!importDialog.hidden) {
+        event.preventDefault();
+        closeImportDialog();
+      } else if (!deleteDialog.hidden) {
         event.preventDefault();
         closeDeleteDialog();
       }
