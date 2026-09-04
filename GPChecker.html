@@ -99,7 +99,11 @@
     .drag-handle:focus-visible { outline: 3px solid rgb(20 184 166 / 24%); outline-offset: -3px; }
     .drag-handle svg { width: 17px; height: 26px; fill: currentColor; }
     .app-main { padding: 18px; }
-    .app-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 15px; margin-bottom: 16px; }
+    .app-top { display: flex; align-items: center; justify-content: space-between; gap: 15px; margin-bottom: 16px; }
+    .app-identity { display: flex; min-width: 0; align-items: center; gap: 10px; }
+    .app-icon { display: block; width: 38px; height: 38px; flex: 0 0 38px; border-radius: 10px; object-fit: cover; background: #e2e8f0; }
+    .app-icon-fallback { display: grid; place-items: center; color: #64748b; background: linear-gradient(135deg, #e2e8f0, #f8fafc); }
+    .app-icon-fallback svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.7; }
     .app-top h3 { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
     .app-code { color: #475569; font-size: 13px; font-weight: 750; }
     .app-actions { display: flex; gap: 9px; align-items: center; }
@@ -122,9 +126,11 @@
     .interval-field { position: relative; display: grid; grid-template-columns: 1fr 82px; gap: 7px; }
     .interval-feedback { position: absolute; z-index: 2; top: calc(100% + 6px); left: 0; width: max-content; max-width: 250px; border: 1px solid #fcd34d; border-radius: 8px; padding: 6px 9px; color: #92400e; background: #fffbeb; box-shadow: 0 7px 16px rgb(146 64 14 / 12%); font-size: 12px; font-weight: 700; line-height: 1.25; }
     .interval-feedback::before { position: absolute; top: -5px; left: 13px; width: 8px; height: 8px; border-top: 1px solid #fcd34d; border-left: 1px solid #fcd34d; background: #fffbeb; content: ""; transform: rotate(45deg); }
-    .refresh-time { margin: 11px 0 0; color: var(--muted); font-size: 12px; }
+    .refresh-time { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 9px; margin: 11px 0 0; color: var(--muted); font-size: 12px; }
+    .refresh-divider { width: 3px; height: 3px; border-radius: 50%; background: #94a3b8; }
+    .offline-period { color: #b45309; font-weight: 750; }
 
-    .switches { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 16px; padding-top: 15px; border-top: 1px solid var(--line); }
+    .switches { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-top: 16px; padding-top: 15px; border-top: 1px solid var(--line); }
     .switch { display: inline-flex; align-items: center; gap: 8px; color: #334155; font-size: 13px; font-weight: 700; cursor: pointer; }
     .switch input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
     .switch-track { position: relative; width: 34px; height: 20px; border-radius: 999px; background: #cbd5e1; transition: background .16s ease; }
@@ -134,6 +140,10 @@
     .switch input:focus-visible + .switch-track { outline: 3px solid rgb(20 184 166 / 24%); outline-offset: 2px; }
     .switch.is-disabled { cursor: not-allowed; color: #94a3b8; }
     .switch.is-disabled .switch-track { background: #e2e8f0; }
+    .switch-group { display: inline-flex; min-width: 0; align-items: center; flex-wrap: wrap; gap: 8px 12px; padding-left: 12px; border-left: 2px solid #d5e8e5; }
+    .switch-group-label { color: #64748b; font-size: 11px; font-weight: 800; letter-spacing: .04em; line-height: 20px; }
+    .switch-group.is-disabled { border-left-color: #e2e8f0; }
+    .switch-group.is-disabled .switch-group-label { color: #94a3b8; }
 
     .global-messages { display: flex; position: sticky; top: 24px; min-width: 0; max-height: calc(100vh - 48px); flex-direction: column; border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); background: #fbfcfe; overflow: hidden; }
     .messages-head { display: grid; grid-template-columns: 25px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 13px 18px; }
@@ -193,6 +203,7 @@
       .app-top { display: block; }
       .app-actions { margin-top: 13px; }
       .switches { display: grid; grid-template-columns: 1fr; }
+      .switch-group { gap: 8px 12px; }
     }
   </style>
 </head>
@@ -212,10 +223,9 @@
       <div class="config-body">
         <div class="config-grid">
           <label>飞书机器人通知 URL<input id="notification-url" type="url" placeholder="https://open.feishu.cn/open-apis/bot/v2/hook/..."></label>
-          <label>Google Play CORS 代理（可选）<input id="proxy-url" placeholder="https://your-proxy.example/?url={url}"></label>
         </div>
         <div class="config-actions"><button id="test-robot" class="button secondary" type="button">发送测试提醒</button><span id="config-feedback" class="config-feedback" role="status"></span></div>
-        <p class="hint">运行 <code>start-gpchecker.sh</code>（macOS）或 <code>start-gpchecker.bat</code>（Windows）后从本机地址打开页面，会自动使用内置同源通道；URL 中包含 <code>{url}</code> 时会替换为编码后的详情页地址。飞书通知需要使用本机服务，以便安全转发并记录返回结果。</p>
+        <p class="hint">运行 <code>start-gpchecker.sh</code>（macOS）或 <code>start-gpchecker.bat</code>（Windows）后，从本机地址打开页面。在线状态、版本、更新时间和图标均由本地 Node 解析服务获取；飞书通知也会经由该服务安全转发并记录返回结果。</p>
       </div>
     </details>
 
@@ -248,48 +258,23 @@
 
   <script>
     /*
-     * Google Play 基础能力（无第三方依赖）。
+     * Google Play 基础能力：所有资料由本地 Node 解析服务获取。
      *
      * 返回约定：
-     * - getOnlineVersionName: 字符串=成功解析到版本名；null=Google Play 明确不存在；""=请求/解析失败。
-     * - getOnlineUpdatedOn: 英文原始日期字符串=成功解析到更新时间；null=Google Play 明确不存在；""=请求/解析失败。
-     * - checkAppOnline: true=详情页存在；false=明确不存在；null=网络异常或无法确认。
+     * - getOnlineVersionName: 字符串=成功解析到版本名；null=目标地区明确未上架；""=请求/解析失败。
+     * - getOnlineUpdatedOn: 本地格式化时间=成功解析到更新时间；null=目标地区明确未上架；""=请求/解析失败。
+     * - checkAppOnline: true=目标地区上架；false=目标地区明确未上架；null=网络异常或无法确认。
      */
     const GPChecker = (() => {
-      const PLAY_DETAILS_URL = "https://play.google.com/store/apps/details";
-      const NOT_FOUND_MARKER = "We're sorry, the requested URL was not found on this server.";
       const MAX_CACHE_ENTRIES = 100;
       const inFlightInspections = new Map();
       const recentInspections = new Map();
-      // 更新时间用于变更提醒，因此所有请求固定使用英文商店文案（Updated on · Aug 29, 2026）。
-      const PLAY_LANGUAGE = "en_US";
-      const DEFAULT_OPTIONS = Object.freeze({ language: PLAY_LANGUAGE, country: "US", proxyUrl: "", retries: 2, timeoutMs: 15_000, cacheTtlMs: 30_000 });
-      const VERSION_PATTERNS = [
-        /(?:Current\s+Version|Version(?:\s+name)?)\s*(?:<[^>]+>\s*)*[:：]?\s*(\d+(?:\.\d+)+(?:[-+._][0-9A-Za-z.-]+)?)/i,
-        /["'](?:versionName|version_name)["']\s*[:=]\s*["'](\d+(?:\.\d+)+(?:[-+._][0-9A-Za-z.-]+)?)["']/i,
-        /itemprop=["']softwareVersion["'][^>]*>\s*(\d+(?:\.\d+)+(?:[-+._][0-9A-Za-z.-]+)?)/i,
-      ];
-      // Google Play 主详情数据中的统一版本字段：
-      // [[["版本名"]],[[[目标 SDK]],[[[最低 SDK,"最低 Android 版本"]]]]]
-      // 该结构与用户评论中的版本号无关，避免将评论版本误判为在线版本。
-      const PLAY_DETAILS_VERSION_PATTERN = /\[\[\[\s*["']([^"']{1,80})["']\s*\]\]\s*,\s*\[\[\[\s*\d+\s*\]\]\s*,\s*\[\[\[\s*\d+\s*,\s*["'][^"']{1,40}["']\s*\]\]\s*\]\]/;
-      // Google Play 的详情回调会将展示日期与精确时间并列：
-      // [["Sep 1, 2026",[1788266879,711000000]]]
-      // 后一组为 Unix seconds / nanoseconds。外层字段编号会随应用与页面版本变化，
-      // 因此不依赖 CKZelvynis 页面中偶然出现的 "146"，而是以 Updated on 的同一日期关联数据对。
-      const PLAY_UPDATED_TIMESTAMP_PATTERN = /["']([A-Z][a-z]{2}\s+\d{1,2},\s+\d{4})["']\s*,\s*\[\s*(\d{10,})\s*,\s*(\d{1,9})\s*\]/g;
-      const UPDATED_ON_PATTERNS = [
-        /(?:^|>)\s*Updated\s+on\s*(?:<[^>]+>\s*)+([A-Z][a-z]{2}\s+\d{1,2},\s+\d{4})(?:\s*<|$)/i,
-        /["']Updated on["'][\s\S]{0,160}?["']([A-Z][a-z]{2}\s+\d{1,2},\s+\d{4})["']/i,
-      ];
+      const DEFAULT_OPTIONS = Object.freeze({ country: "US", timeoutMs: 20_000, cacheTtlMs: 30_000 });
 
       function normalizeOptions(rawOptions = {}) {
         const merged = { ...DEFAULT_OPTIONS, ...rawOptions };
         return {
-          ...merged,
-          language: PLAY_LANGUAGE,
-          country: String(merged.country || "").trim(),
-          retries: Math.max(0, Number(merged.retries) || 0),
+          country: /^[a-z]{2}$/i.test(String(merged.country || "").trim()) ? String(merged.country).trim().toUpperCase() : DEFAULT_OPTIONS.country,
           timeoutMs: Math.max(1, Number(merged.timeoutMs) || DEFAULT_OPTIONS.timeoutMs),
           cacheTtlMs: Math.max(0, Number(merged.cacheTtlMs) || 0),
         };
@@ -303,122 +288,52 @@
         return normalized;
       }
 
-      function buildDetailsUrl(packageName, options = DEFAULT_OPTIONS) {
-        const params = new URLSearchParams({ id: validatePackageName(packageName), hl: PLAY_LANGUAGE });
-        if (options.country) params.set("gl", options.country);
-        return `${PLAY_DETAILS_URL}?${params}`;
-      }
-
-      function buildRequestUrl(detailsUrl, proxyUrl) {
-        const proxy = String(proxyUrl || "").trim();
-        if (!proxy) return detailsUrl;
-        const encodedDetailsUrl = encodeURIComponent(detailsUrl);
-        return proxy.includes("{url}") ? proxy.replaceAll("{url}", encodedDetailsUrl) : `${proxy}${encodedDetailsUrl}`;
-      }
-
-      function decodeGoogleEscapes(value) {
-        return value
-          .replace(/\\u([0-9a-fA-F]{4})/g, (_, hex) => String.fromCharCode(Number.parseInt(hex, 16)))
-          .replace(/\\x([0-9a-fA-F]{2})/g, (_, hex) => String.fromCharCode(Number.parseInt(hex, 16)));
-      }
-
-      function escapeRegExp(value) { return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
-
-      function findWithPatterns(source, patterns) {
-        for (const pattern of patterns) {
-          const match = source.match(pattern);
-          if (match) return match[1];
-        }
-        return "";
-      }
-
-      function extractPlayDetailsVersion(source, packageName) {
-        for (const scriptMatch of source.matchAll(/<script\b[^>]*>[\s\S]*?<\/script>/gi)) {
-          const script = scriptMatch[0];
-          if (!script.includes(packageName)) continue;
-          const match = script.match(PLAY_DETAILS_VERSION_PATTERN);
-          if (match) return match[1].trim();
-        }
-        return "";
-      }
-
-      function extractVersionName(html, packageName) {
-        const decodedHtml = /\\[ux][0-9a-fA-F]/.test(html) ? decodeGoogleEscapes(html) : html;
-        for (const source of decodedHtml === html ? [html] : [html, decodedHtml]) {
-          const playDetailsVersion = extractPlayDetailsVersion(source, packageName);
-          if (playDetailsVersion) return playDetailsVersion;
-          const legacyVersion = findWithPatterns(source, VERSION_PATTERNS);
-          if (legacyVersion) return legacyVersion;
-        }
-        return "";
-      }
-
-      function formatPlayTimestamp(secondsText, nanosecondsText) {
-        const seconds = Number(secondsText);
-        const nanoseconds = Number(nanosecondsText);
-        if (!Number.isSafeInteger(seconds) || !Number.isSafeInteger(nanoseconds) || nanoseconds < 0 || nanoseconds >= 1_000_000_000) return "";
-        const date = new Date(seconds * 1_000 + Math.floor(nanoseconds / 1_000_000));
+      function formatLocalTimestamp(timestamp) {
+        const date = new Date(timestamp);
         if (Number.isNaN(date.getTime())) return "";
         const pad = value => String(value).padStart(2, "0");
         return `${date.getFullYear()}/${pad(date.getMonth() + 1)}/${pad(date.getDate())}-${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
       }
 
-      function extractUpdatedOn(html) {
-        const decodedHtml = /\\[ux][0-9a-fA-F]/.test(html) ? decodeGoogleEscapes(html) : html;
-        for (const source of decodedHtml === html ? [html] : [html, decodedHtml]) {
-          const updatedOn = findWithPatterns(source, UPDATED_ON_PATTERNS);
-          if (!updatedOn) continue;
-          const displayedUpdatedOn = updatedOn.trim();
-          for (const timestampMatch of source.matchAll(PLAY_UPDATED_TIMESTAMP_PATTERN)) {
-            if (timestampMatch[1] !== displayedUpdatedOn) continue;
-            const preciseUpdatedOn = formatPlayTimestamp(timestampMatch[2], timestampMatch[3]);
-            if (preciseUpdatedOn) return preciseUpdatedOn;
-          }
-          return displayedUpdatedOn;
-        }
-        return "";
+      function localInspectionUrl(packageName, options) {
+        if (typeof location === "undefined" || !["127.0.0.1", "localhost"].includes(location.hostname) || !/^https?:$/.test(location.protocol)) return "";
+        const params = new URLSearchParams({ id: packageName, country: options.country });
+        return `${location.origin}/api/app-inspect?${params}`;
       }
 
-      function isNotFound(response, html) { return response.status === 404 || html.includes(NOT_FOUND_MARKER); }
+      async function inspectAppUncached(packageName, options) {
+        const endpoint = localInspectionUrl(packageName, options);
+        if (!endpoint) {
+          return { packageName, online: null, version: "", updatedOn: "", appInfo: null, error: "请通过 start-gpchecker 启动的本机地址打开页面后检测。" };
+        }
 
-      async function requestDetailsPage(packageName, options, detailsUrl) {
-        const targetUrl = detailsUrl || buildDetailsUrl(packageName, options);
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), options.timeoutMs);
         try {
-          const response = await fetch(buildRequestUrl(targetUrl, options.proxyUrl), { method: "GET", headers: { Accept: "text/html,application/xhtml+xml", "Accept-Language": "en-US,en;q=0.9" }, signal: controller.signal });
-          return { response, html: await response.text(), detailsUrl: targetUrl };
+          const response = await fetch(endpoint, { headers: { Accept: "application/json" }, signal: controller.signal });
+          const payload = await response.json().catch(() => null);
+          if (!response.ok || payload?.success !== true) {
+            return { packageName, online: null, version: "", updatedOn: "", appInfo: null, error: payload?.error || `HTTP ${response.status}` };
+          }
+          const data = payload.data || {};
+          if (data.online === false) return { packageName, online: false, version: null, updatedOn: null, appInfo: null };
+          if (data.online !== true) return { packageName, online: null, version: "", updatedOn: "", appInfo: null, error: "解析器未返回可确认的在线状态。" };
+          return {
+            packageName,
+            online: true,
+            // 保留解析器原始版本信息（例如 VARY）；仅缺失时由界面显示“未知”。
+            version: typeof data.version === "string" ? data.version.trim() : "",
+            updatedOn: Number.isSafeInteger(data.updated) ? formatLocalTimestamp(data.updated) : "",
+            appInfo: data.appInfo || null,
+          };
+        } catch (error) {
+          return { packageName, online: null, version: "", updatedOn: "", appInfo: null, error: error?.name === "AbortError" ? "检测超时。" : (error instanceof Error ? error.message : String(error)) };
         } finally {
           clearTimeout(timeoutId);
         }
       }
 
-      async function requestWithRetries(packageName, options, detailsUrl) {
-        let lastError;
-        for (let attempt = 0; attempt <= options.retries; attempt += 1) {
-          try {
-            const page = await requestDetailsPage(packageName, options, detailsUrl);
-            if (page.response.ok || isNotFound(page.response, page.html) || attempt === options.retries) return page;
-          } catch (error) {
-            lastError = error;
-            if (attempt === options.retries) throw error;
-          }
-        }
-        throw lastError || new Error("无法请求 Google Play 详情页。");
-      }
-
-      async function inspectAppUncached(packageName, options, detailsUrl) {
-        try {
-          const page = await requestWithRetries(packageName, options, detailsUrl);
-          if (isNotFound(page.response, page.html)) return { packageName, online: false, version: null, updatedOn: null, detailsUrl: page.detailsUrl };
-          if (!page.response.ok) return { packageName, online: null, version: "", updatedOn: "", detailsUrl: page.detailsUrl, error: `HTTP ${page.response.status}` };
-          return { packageName, online: true, version: extractVersionName(page.html, packageName), updatedOn: extractUpdatedOn(page.html), detailsUrl: page.detailsUrl };
-        } catch (error) {
-          return { packageName, online: null, version: "", updatedOn: "", detailsUrl, error: error instanceof Error ? error.message : String(error) };
-        }
-      }
-
-      function inspectionKey(packageName, options, detailsUrl) { return JSON.stringify([packageName, detailsUrl, String(options.proxyUrl || "").trim()]); }
+      function inspectionKey(packageName, options) { return JSON.stringify([packageName, options.country]); }
 
       function readCachedInspection(key, now) {
         const cached = recentInspections.get(key);
@@ -440,13 +355,12 @@
       async function inspectApp(packageName, rawOptions = {}) {
         const options = normalizeOptions(rawOptions);
         const normalizedPackageName = validatePackageName(packageName);
-        const detailsUrl = buildDetailsUrl(normalizedPackageName, options);
-        const key = inspectionKey(normalizedPackageName, options, detailsUrl);
+        const key = inspectionKey(normalizedPackageName, options);
         const cached = readCachedInspection(key, Date.now());
         if (cached) return cached;
         const inFlight = inFlightInspections.get(key);
         if (inFlight) return inFlight;
-        const request = inspectAppUncached(normalizedPackageName, options, detailsUrl)
+        const request = inspectAppUncached(normalizedPackageName, options)
           .then(value => { cacheInspection(key, value, options.cacheTtlMs); return value; })
           .finally(() => inFlightInspections.delete(key));
         inFlightInspections.set(key, request);
@@ -458,9 +372,7 @@
         getOnlineVersionName: async (packageName, options = {}) => (await inspectApp(packageName, options)).version,
         getOnlineUpdatedOn: async (packageName, options = {}) => (await inspectApp(packageName, options)).updatedOn,
         inspectApp,
-        extractVersionName,
-        extractUpdatedOn,
-        buildDetailsUrl,
+        validatePackageName,
         clearCache: () => recentInspections.clear(),
       });
     })();
@@ -487,7 +399,10 @@
       lastDetectedStatus: null,
       versionName: "",
       lastUpdatedText: "",
+      appInfo: null,
       lastSuccessfulAt: null,
+      lastOnlineDetectedAt: null,
+      offlineStartedAt: null,
       lastAttemptAt: null,
       checking: false,
       lastError: "",
@@ -502,7 +417,6 @@
     const addForm = document.querySelector("#add-form");
     const addError = document.querySelector("#add-error");
     const notificationUrlInput = document.querySelector("#notification-url");
-    const proxyUrlInput = document.querySelector("#proxy-url");
     const testRobotButton = document.querySelector("#test-robot");
     const configFeedback = document.querySelector("#config-feedback");
     const deleteDialog = document.querySelector("#delete-dialog");
@@ -514,16 +428,12 @@
     let robotDispatchTimer = null;
 
     notificationUrlInput.value = state.config.notificationUrl;
-    proxyUrlInput.value = state.config.proxyUrl;
 
     function isLocalServer() {
       return ["127.0.0.1", "localhost"].includes(location.hostname) && /^https?:$/.test(location.protocol);
     }
 
-    function defaultConfig() {
-      const localServer = isLocalServer();
-      return { notificationUrl: "", proxyUrl: localServer ? `${location.origin}/api/play?url={url}` : "" };
-    }
+    function defaultConfig() { return { notificationUrl: "" }; }
 
     function loadState() {
       const defaults = defaultConfig();
@@ -532,7 +442,7 @@
         if (!saved || !Array.isArray(saved.items)) throw new Error("No saved state");
         const legacyMessages = saved.items.flatMap(item => Array.isArray(item.messages) ? item.messages : []);
         return {
-          config: { notificationUrl: String(saved.config?.notificationUrl || ""), proxyUrl: String(saved.config?.proxyUrl ?? defaults.proxyUrl) },
+          config: { notificationUrl: String(saved.config?.notificationUrl || "") },
           items: saved.items.map(normalizeApp),
           messages: (Array.isArray(saved.messages) ? saved.messages : legacyMessages)
             .filter(Boolean).map(normalizeMessage)
@@ -551,10 +461,38 @@
       app.intervalDraft = null;
       app.intervalHint = "";
       app.lastUpdatedText = String(app.lastUpdatedText || "").trim();
+      app.appInfo = normalizeAppInfo(app.appInfo);
+      app.lastSuccessfulAt = normalizeTimestamp(app.lastSuccessfulAt);
+      app.lastOnlineDetectedAt = normalizeTimestamp(app.lastOnlineDetectedAt);
+      app.offlineStartedAt = normalizeTimestamp(app.offlineStartedAt);
+      // 旧数据没有离线起点；以已保存的最近一次成功检测作为可用的迁移起点。
+      if (app.status === "offline" && !app.offlineStartedAt) app.offlineStartedAt = app.lastSuccessfulAt;
       app.intervalUnit = ["seconds", "minutes", "hours"].includes(app.intervalUnit) ? app.intervalUnit : "minutes";
       const savedInterval = Number(app.intervalValue);
       app.intervalValue = Math.max(minimumIntervalValue(app.intervalUnit), Number.isFinite(savedInterval) ? savedInterval : 5);
       return app;
+    }
+
+    function normalizeAppInfo(value) {
+      const info = value && typeof value === "object" ? value : {};
+      const safeText = (raw, maxLength) => String(raw || "").trim().slice(0, maxLength);
+      let icon = "";
+      try {
+        const url = new URL(String(info.icon || ""));
+        if (url.protocol === "https:") icon = url.toString();
+      } catch { /* 未知或旧数据使用缺省图标。 */ }
+      return {
+        source: safeText(info.source, 80),
+        title: safeText(info.title, 160),
+        icon,
+        version: safeText(info.version, 80),
+        updated: Number.isSafeInteger(info.updated) && info.updated > 0 ? info.updated : null,
+        summary: safeText(info.summary, 1_000),
+        developer: safeText(info.developer, 160),
+        genre: safeText(info.genre, 120),
+        installs: safeText(info.installs, 80),
+        score: Number.isFinite(info.score) ? info.score : null,
+      };
     }
 
     function normalizeRobotState(value, hasRobotState) {
@@ -646,9 +584,16 @@
       activeSortDrag = null;
     }
 
+    function applicationLabel(item, fallback = "未编号") {
+      const title = String(item?.appInfo?.title || "").trim();
+      const code = String(item?.code || "").trim();
+      if (title) return code ? `${code}(${title})` : title;
+      return code || fallback;
+    }
+
     function openDeleteDialog(item) {
       pendingDeleteId = item.id;
-      const label = [item.code || "未编号", item.packageName || "未填写包名"].join(" · ");
+      const label = [applicationLabel(item), item.packageName || "未填写包名"].join(" · ");
       deleteDialogDescription.textContent = `将删除「${label}」，并停止后续监测。此操作不会影响已保存的其它消息。`;
       shell.inert = true;
       document.body.classList.add("modal-open");
@@ -706,6 +651,19 @@
       return `${date.getFullYear()}/${pad(date.getMonth() + 1)}/${pad(date.getDate())}-${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
     }
 
+    function normalizeTimestamp(value) {
+      const timestamp = Number(value);
+      return Number.isSafeInteger(timestamp) && timestamp > 0 ? timestamp : null;
+    }
+
+    function offlinePeriodDisplay(item) {
+      if (item.status !== "offline") return "";
+      const firstOfflineAt = normalizeTimestamp(item.offlineStartedAt);
+      const lastOnlineAt = normalizeTimestamp(item.lastOnlineDetectedAt);
+      if (!lastOnlineAt || !firstOfflineAt) return "";
+      return `离线时间 ${formatRefreshTime(lastOnlineAt)} ~ ${formatRefreshTime(firstOfflineAt)}`;
+    }
+
     function statusDisplay(item) {
       if (item.checking) return ["检测中", "checking"];
       if (item.status === "online") return ["在线", "online"];
@@ -713,9 +671,16 @@
       return ["待检测", "unknown"];
     }
 
-    function versionDisplay(value) {
-      const versionName = String(value || "").trim();
-      return versionName ? `v${versionName}` : "未知";
+      function versionDisplay(value) {
+        const versionName = String(value || "").trim();
+        return versionName || "未知";
+      }
+
+    function renderAppIcon(item) {
+      const icon = item.appInfo?.icon || "";
+      const title = item.appInfo?.title || item.packageName || "应用图标";
+      if (icon) return `<img class="app-icon" src="${escapeHtml(icon)}" alt="${escapeHtml(title)}" title="${escapeHtml(title)}">`;
+      return `<span class="app-icon app-icon-fallback" role="img" aria-label="${escapeHtml(title)}" title="${escapeHtml(title)}"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M8 15.5 10.7 12l2.1 2.4 1.7-1.9L17 15.5"/><circle cx="9" cy="9" r="1"/></svg></span>`;
     }
 
     function robotStateLabel(message) {
@@ -898,12 +863,13 @@
       const dependentDisabled = !item.monitorEnabled;
       const intervalInputValue = item.intervalDraft ?? item.intervalValue;
       const minimumInterval = minimumIntervalValue(item.intervalUnit);
+      const offlinePeriod = offlinePeriodDisplay(item);
       return `
         <article class="app-card" data-id="${item.id}">
           <div class="drag-handle" role="button" aria-label="拖动排序" title="按住拖动排序"><svg viewBox="0 0 8 20" aria-hidden="true"><circle cx="2" cy="3" r="1.2"/><circle cx="6" cy="3" r="1.2"/><circle cx="2" cy="10" r="1.2"/><circle cx="6" cy="10" r="1.2"/><circle cx="2" cy="17" r="1.2"/><circle cx="6" cy="17" r="1.2"/></svg></div>
           <div class="app-main">
             <div class="app-top">
-              <h3><span>${escapeHtml(item.code || "未编号")}</span><span class="app-code">${escapeHtml(item.packageName || "未填写包名")}</span><span class="state ${statusClass}">${statusText}</span></h3>
+              <div class="app-identity">${renderAppIcon(item)}<h3><span>${escapeHtml(applicationLabel(item))}</span><span class="app-code">${escapeHtml(item.packageName || "未填写包名")}</span><span class="state ${statusClass}">${statusText}</span></h3></div>
               <div class="app-actions">
                 <button class="icon-button ${item.checking ? "is-spinning" : ""}" data-action="check-now" ${item.checking ? "disabled" : ""} aria-label="${item.checking ? "正在检测" : "刷新检测"}" title="${item.checking ? "正在检测" : "刷新检测"}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 0 1 15.5-6.2L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15.5 6.2L3 16"/><path d="M8 16H3v5"/></svg></button>
                 <button class="icon-button delete" data-action="delete-app" aria-label="删除监测项" title="删除监测项"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"/><path d="M10 11v6M14 11v6"/><path d="M6 7l1 13h10l1-13"/><path d="M9 7V4h6v3"/></svg></button>
@@ -915,12 +881,15 @@
               <label>包名<input data-field="packageName" value="${escapeHtml(item.packageName)}" placeholder="com.example.app"></label>
               <label>检测间隔<div class="interval-field"><input data-field="intervalValue" type="number" min="${minimumInterval}" step="1" value="${escapeHtml(intervalInputValue)}" title="输入后按 Enter 确认"><select data-field="intervalUnit"><option value="seconds" ${item.intervalUnit === "seconds" ? "selected" : ""}>秒</option><option value="minutes" ${item.intervalUnit === "minutes" ? "selected" : ""}>分钟</option><option value="hours" ${item.intervalUnit === "hours" ? "selected" : ""}>小时</option></select>${item.intervalHint ? `<span class="interval-feedback" role="status">${escapeHtml(item.intervalHint)}</span>` : ""}</div></label>
             </div>
-            ${item.lastSuccessfulAt ? `<div class="refresh-time">上次刷新 ${formatRefreshTime(item.lastSuccessfulAt)}</div>` : ""}
+            ${item.lastSuccessfulAt ? `<div class="refresh-time"><span>上次刷新 ${formatRefreshTime(item.lastSuccessfulAt)}</span>${offlinePeriod ? `<span class="refresh-divider" aria-hidden="true"></span><span class="offline-period">${escapeHtml(offlinePeriod)}</span>` : ""}</div>` : ""}
             <div class="switches">
               ${renderSwitch("monitorEnabled", "基础状态监测", item.monitorEnabled, false)}
-              ${renderSwitch("onlineAlertEnabled", "上线提醒", item.onlineAlertEnabled, dependentDisabled)}
-              ${renderSwitch("offlineAlertEnabled", "离线提醒", item.offlineAlertEnabled, dependentDisabled)}
-              ${renderSwitch("versionChangeAlertEnabled", "版本变更提醒", item.versionChangeAlertEnabled, dependentDisabled)}
+              <div class="switch-group ${dependentDisabled ? "is-disabled" : ""}" role="group" aria-label="基础状态监测提醒">
+                <span class="switch-group-label">提醒</span>
+                ${renderSwitch("onlineAlertEnabled", "上线提醒", item.onlineAlertEnabled, dependentDisabled)}
+                ${renderSwitch("offlineAlertEnabled", "离线提醒", item.offlineAlertEnabled, dependentDisabled)}
+                ${renderSwitch("versionChangeAlertEnabled", "版本变更提醒", item.versionChangeAlertEnabled, dependentDisabled)}
+              </div>
             </div>
           </div>
         </article>`;
@@ -944,13 +913,14 @@
     }
 
     function messageContext(item, versionName = item.versionName) {
-      return `编号：${item.code || "未填写"}；包名：${item.packageName}；版本：${versionDisplay(versionName)}；更新时间：${item.lastUpdatedText || "未知"}`;
+      return `编号：${applicationLabel(item, "未填写")}；包名：${item.packageName}；版本：${versionDisplay(versionName)}；更新时间：${item.lastUpdatedText || "未知"}`;
     }
 
     function applyInspection(item, data) {
       const detectedStatus = data.online === true ? "online" : data.online === false ? "offline" : "unknown";
+      const detectedAt = Date.now();
       item.checking = false;
-      item.lastAttemptAt = Date.now();
+      item.lastAttemptAt = detectedAt;
       item.lastError = data.error || "";
       if (detectedStatus === "unknown") {
         item.status = "unknown";
@@ -961,11 +931,16 @@
       const previousUpdatedText = item.lastUpdatedText;
       item.status = detectedStatus;
       item.lastDetectedStatus = detectedStatus;
-      item.lastSuccessfulAt = Date.now();
+      item.lastSuccessfulAt = detectedAt;
       // 离线详情页没有可解析版本，保留最后一次在线版本供状态与离线提醒使用。
       if (detectedStatus === "online") {
+        item.lastOnlineDetectedAt = detectedAt;
+        item.offlineStartedAt = null;
         item.versionName = data.version;
         if (data.updatedOn) item.lastUpdatedText = data.updatedOn;
+        if (data.appInfo) item.appInfo = normalizeAppInfo(data.appInfo);
+      } else if (previousStatus !== "offline" || !normalizeTimestamp(item.offlineStartedAt)) {
+        item.offlineStartedAt = detectedAt;
       }
 
       if (item.monitorEnabled && detectedStatus === "online" && previousStatus === "offline" && item.onlineAlertEnabled) {
@@ -985,7 +960,7 @@
       item.checking = true;
       render();
       try {
-        const data = await GPChecker.inspectApp(requestedPackageName, { proxyUrl: state.config.proxyUrl, cacheTtlMs: 0 });
+        const data = await GPChecker.inspectApp(requestedPackageName, { cacheTtlMs: 0 });
         if (!state.items.includes(item) || item.packageName !== requestedPackageName) return;
         applyInspection(item, data);
       } catch (error) {
@@ -1001,7 +976,7 @@
 
     function resetDetection(item) {
       Object.assign(item, {
-        status: "unknown", lastDetectedStatus: null, versionName: "", lastUpdatedText: "", lastSuccessfulAt: null, lastAttemptAt: null, lastError: "", checking: false,
+        status: "unknown", lastDetectedStatus: null, versionName: "", lastUpdatedText: "", appInfo: null, lastSuccessfulAt: null, lastOnlineDetectedAt: null, offlineStartedAt: null, lastAttemptAt: null, lastError: "", checking: false,
       });
     }
 
@@ -1038,7 +1013,7 @@
       const packageName = document.querySelector("#new-package").value.trim();
       if (!code || !packageName) { addError.textContent = "请填写编号和包名。"; return; }
       try {
-        GPChecker.buildDetailsUrl(packageName);
+        GPChecker.validatePackageName(packageName);
       } catch (error) {
         addError.textContent = error.message;
         return;
@@ -1055,23 +1030,17 @@
       checkApp(item, true);
     });
 
-    [notificationUrlInput, proxyUrlInput].forEach(input => {
-      input.addEventListener("change", () => {
-        state.config.notificationUrl = notificationUrlInput.value.trim();
-        state.config.proxyUrl = proxyUrlInput.value.trim();
-        if (input === notificationUrlInput) {
-          for (const message of state.messages) {
-            if (!message.readAt && ["not-configured", "failed", "pending"].includes(message.robot.status)) {
-              message.robot.status = state.config.notificationUrl ? "pending" : "not-configured";
-              message.robot.nextRetryAt = null;
-            }
-          }
-          setConfigFeedback(state.config.notificationUrl ? "通知地址已保存，未读消息将自动发送。" : "未配置机器人地址，新增消息不会发送。", false);
-          scheduleRobotDeliveries();
+    notificationUrlInput.addEventListener("change", () => {
+      state.config.notificationUrl = notificationUrlInput.value.trim();
+      for (const message of state.messages) {
+        if (!message.readAt && ["not-configured", "failed", "pending"].includes(message.robot.status)) {
+          message.robot.status = state.config.notificationUrl ? "pending" : "not-configured";
+          message.robot.nextRetryAt = null;
         }
-        GPChecker.clearCache();
-        persist();
-      });
+      }
+      setConfigFeedback(state.config.notificationUrl ? "通知地址已保存，未读消息将自动发送。" : "未配置机器人地址，新增消息不会发送。", false);
+      scheduleRobotDeliveries();
+      persist();
     });
 
     testRobotButton.addEventListener("click", () => {
@@ -1239,7 +1208,7 @@
       updateField(item, field, input.type === "checkbox" ? input.checked : input.value, input.type);
       if (field === "packageName" && item.packageName !== oldPackageName) {
         try {
-          GPChecker.buildDetailsUrl(item.packageName);
+          GPChecker.validatePackageName(item.packageName);
           resetDetection(item);
         } catch {
           item.packageName = oldPackageName;

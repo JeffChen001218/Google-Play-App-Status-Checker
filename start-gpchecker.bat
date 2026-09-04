@@ -10,4 +10,14 @@ if errorlevel 1 (
   exit /b 1
 )
 
+if not exist "node_modules\@mradex77\google-play-scraper" (
+  echo Installing the locked parser dependency for the first run...
+  call npm ci --no-audit --no-fund
+  if errorlevel 1 (
+    echo Dependency installation failed.
+    pause
+    exit /b 1
+  )
+)
+
 node ".check.js" %*

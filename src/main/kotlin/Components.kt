@@ -19,7 +19,6 @@ import androidx.compose.ui.unit.sp
 import component.AutoSizeText
 import model.AppStatus
 import model.AppStatus.Status
-import repo.Repo
 import kotlin.math.max
 
 @Composable
@@ -43,59 +42,6 @@ fun PackageListComponent(
                 showAddDialog = true
             }) {
                 Text("添加")
-            }
-        }
-
-        var host by remember { mutableStateOf(Repo.host.value) }
-        var port by remember { mutableStateOf(Repo.port.value) }
-        val savedHost by Repo.host.state
-        val savedPort by Repo.port.state
-        Row(
-            Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            OutlinedTextField(
-                value = host,
-                onValueChange = { host = it },
-                label = { Text("外网代理-host") },
-                singleLine = true
-            )
-            OutlinedTextField(
-                value = port.let {
-                    if (it <= 0) ""
-                    else it.toString()
-                },
-                onValueChange = { port = it.toIntOrNull() ?: 0 },
-                label = { Text("外网代理-端口") },
-                singleLine = true
-            )
-            if (savedHost != host
-                || savedPort != port
-            ) {
-                Button(onClick = {
-                    Repo.host.value = host
-                    Repo.port.value = port
-                }) {
-                    Text("保存")
-                }
-                Button(onClick = {
-                    host = Repo.host.value
-                    port = Repo.port.value
-                }) {
-                    Text("取消修改")
-                }
-            }
-            if (savedHost != "127.0.0.1"
-                || savedPort != 7890
-            ) {
-                Button(onClick = {
-                    Repo.host.value = "127.0.0.1"
-                    Repo.port.value = 7890
-                    host = "127.0.0.1"
-                    port = 7890
-                }) {
-                    Text("重置")
-                }
             }
         }
 

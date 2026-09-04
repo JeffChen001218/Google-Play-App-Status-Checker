@@ -2,71 +2,63 @@ package tool
 
 import PersisValue
 import io.ktor.client.*
-import io.ktor.client.call.*
 import io.ktor.client.engine.*
 import io.ktor.client.engine.cio.*
-import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
-import io.ktor.http.cio.*
-import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.*
 import kotlinx.serialization.*
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.*
-import repo.Repo
 
 object CheckStatusTool {
 
-    // 初始化客户端
-    val client = HttpClient(CIO) {
-        engine {
-            proxy = ProxyBuilder.http("http://${Repo.host.value}:${Repo.port.value}")
-        }
-        install(ContentNegotiation) {
-            json(Json { ignoreUnknownKeys = true })
-        }
-    }
+    private const val nodeInspectionUrl = "http://127.0.0.1:18765/api/app-inspect"
+    private val client = HttpClient(CIO)
+    private val json = Json { ignoreUnknownKeys = true }
 
-    // 普通 GET 请求获取纯文本
-    suspend fun fetchPlainText(url: String): HttpResponse {
-        val response: HttpResponse = client.get(url)
-        return response
+    @Serializable
+    private data class NodeInspectionResponse(
+        val success: Boolean = false,
+        val data: NodeInspectionData? = null,
+    )
+
+    @Serializable
+    private data class NodeInspectionData(
+        val online: Boolean? = null,
+        val version: String? = null,
+    )
+
+    private suspend fun requestNodeInspection(packageName: String): NodeInspectionData? {
+        val response = client.get(nodeInspectionUrl) {
+            parameter("id", packageName)
+            parameter("country", "US")
+        }
+        if (!response.status.isSuccess()) return null
+        val payload = json.decodeFromString<NodeInspectionResponse>(response.bodyAsText())
+        return payload.data?.takeIf { payload.success }
     }
 
     /**
-     * parsing [versionName] via Google PlayStore website
-     *      null  ->  fetch/parse failed
+     * 通过本地 Node 解析服务读取 Google Play 上架状态和版本名。
+     * 返回：null=目标地区明确未上架；空字符串=服务不可用或无法解析。
      */
     suspend fun getOnlineVersionName(
         packageName: String,
         retryTimes: Int = 2
     ): String? = withContext(Dispatchers.IO) {
-        runCatching {
-            val response = fetchPlainText("https://play.google.com/store/apps/details?id=${packageName}&hl=en")
-            val html = response.bodyAsText()
-            if (response.status.isSuccess()) {
-                """<script.*${packageName}.*(\["[0-9]+\.[0-9]+(\.[0-9]+)?"\]).*</script>""".toRegex()
-                    .find(html)?.value?.let {
-                        """\["[0-9]+\.[0-9]+(\.[0-9]+)?"\]""".toRegex().find(it)?.value
-                    }
-                    ?.replace("[", "")
-                    ?.replace("]", "")
-                    ?.replace("\"", "")
-                    ?.takeIf { it.isNotBlank() } ?: ""
-            } else {
-                if (html.contains("We're sorry, the requested URL was not found on this server.")) {
-                    return@withContext null
-                }
-                // fetch failed
-                if (retryTimes > 0) {
-                    // retry
-                    getOnlineVersionName(packageName, retryTimes - 1)
-                } else null
+        repeat(retryTimes.coerceAtLeast(0) + 1) {
+            val result = runCatching { requestNodeInspection(packageName) }.getOrNull() ?: return@repeat
+            return@withContext when (result.online) {
+                // 直接保留 Node 解析器的版本字段；字段缺失才视为未知。
+                true -> result.version.orEmpty()
+                false -> null
+                null -> ""
             }
-        }.getOrNull() ?: ""
+        }
+        ""
     }
 
     private var releasedVersionNameList by PersisValue.create(

@@ -3,8 +3,8 @@
 /**
  * GPChecker 的本地同源服务：
  * - 仅监听 127.0.0.1，不对局域网公开；
- * - 仅转发 play.google.com/store/apps/details；
- * - 同时托管 GPChecker.html，浏览器无需跨域访问 Google Play。
+ * - 通过维护中的 Node Google Play 解析器读取公开资料；
+ * - 同时托管 GPChecker.html，浏览器不直接请求或解析 Google Play HTML。
  */
 const http = require("http");
 const fs = require("fs/promises");
@@ -15,6 +15,19 @@ const port = Number(process.argv[2]) || 18765;
 const htmlPath = path.join(__dirname, "GPChecker.html");
 const packageNamePattern = /^[A-Za-z][A-Za-z0-9_]*(?:\.[A-Za-z][A-Za-z0-9_]*)+$/;
 const maxNotificationBodyBytes = 64 * 1024;
+const appInfoCacheTtlMs = 5 * 60 * 1_000;
+const appInfoCache = new Map();
+const appInfoRequests = new Map();
+
+let scraperClient = null;
+let scraperLoadError = "";
+try {
+  // 该库是经过类型校验与每日契约测试维护的 Google Play 公开信息解析器。
+  const scraper = require("@mradex77/google-play-scraper").default;
+  scraperClient = scraper.createClient({ lang: "en", country: "us", throttle: 1 });
+} catch (error) {
+  scraperLoadError = error instanceof Error ? error.message : String(error);
+}
 
 function send(response, status, body, headers = {}) {
   response.writeHead(status, {
@@ -25,16 +38,91 @@ function send(response, status, body, headers = {}) {
   response.end(body);
 }
 
-function validatePlayUrl(rawUrl) {
-  const url = new URL(rawUrl);
-  if (url.protocol !== "https:" || url.hostname !== "play.google.com" || url.pathname !== "/store/apps/details") {
-    throw new Error("只允许访问 Google Play 应用详情页。");
-  }
-  const packageName = url.searchParams.get("id") || "";
+function validatePackageName(rawPackageName) {
+  const packageName = String(rawPackageName || "").trim();
   if (!packageNamePattern.test(packageName)) throw new Error("无效的应用包名。");
-  // 更新时间解析依赖英文页面的固定日期格式（例如 Aug 29, 2026）。
-  url.searchParams.set("hl", "en_US");
-  return url;
+  return packageName;
+}
+
+function validateCountry(rawCountry) {
+  const country = String(rawCountry || "us").trim().toLowerCase();
+  if (!/^[a-z]{2}$/.test(country)) throw new Error("国家/地区代码必须为两个英文字母。");
+  return country;
+}
+
+function textValue(value, maxLength = 400) {
+  return typeof value === "string" ? value.trim().slice(0, maxLength) : "";
+}
+
+function httpsUrl(value) {
+  try {
+    const url = new URL(String(value || ""));
+    return url.protocol === "https:" ? url.toString() : "";
+  } catch {
+    return "";
+  }
+}
+
+function normalizedAppInfo(app) {
+  const updated = Number(app?.updated);
+  return {
+    source: "google-play-scraper",
+    title: textValue(app?.title, 160),
+    icon: httpsUrl(app?.icon),
+    version: textValue(app?.version, 80),
+    updated: Number.isSafeInteger(updated) && updated > 0 ? updated : null,
+    summary: textValue(app?.summary, 1_000),
+    developer: textValue(app?.developer, 160),
+    genre: textValue(app?.genre, 120),
+    installs: textValue(app?.installs, 80),
+    score: Number.isFinite(app?.score) ? app.score : null,
+  };
+}
+
+function withTimeout(promise, timeoutMs, message) {
+  let timeoutId;
+  const timeout = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error(message)), timeoutMs);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timeoutId));
+}
+
+async function getAppInfo(packageName, country) {
+  if (!scraperClient) throw new Error(`应用信息解析器不可用：${scraperLoadError || "依赖未安装"}`);
+  const cacheKey = `${country}:${packageName}`;
+  const now = Date.now();
+  const cached = appInfoCache.get(cacheKey);
+  if (cached?.expiresAt > now) return cached.value;
+  if (appInfoRequests.has(cacheKey)) return appInfoRequests.get(cacheKey);
+  const request = withTimeout(scraperClient.app({ appId: packageName, country, lang: "en" }), 15_000, "应用信息解析超时。")
+    .then(normalizedAppInfo)
+    .then(value => {
+      appInfoCache.set(cacheKey, { value, expiresAt: Date.now() + appInfoCacheTtlMs });
+      return value;
+    })
+    .finally(() => appInfoRequests.delete(cacheKey));
+  appInfoRequests.set(cacheKey, request);
+  return request;
+}
+
+async function getAppInspection(packageName, country) {
+  if (!scraperClient) throw new Error(`应用信息解析器不可用：${scraperLoadError || "依赖未安装"}`);
+  const availability = await withTimeout(
+    scraperClient.availability({ appId: packageName, countries: [country] }),
+    15_000,
+    "在线状态检测超时。",
+  );
+  const status = availability?.countries?.[country]?.status;
+  if (status === "unavailable") return { online: false, version: null, updated: null, appInfo: null };
+  if (status !== "available") throw new Error("无法确认应用在所选国家/地区的上架状态。");
+
+  const appInfo = await getAppInfo(packageName, country);
+  return {
+    online: true,
+    version: appInfo.version,
+    updated: appInfo.updated,
+    appInfo,
+  };
 }
 
 function validateFeishuWebhookUrl(rawUrl) {
@@ -121,27 +209,19 @@ const server = http.createServer(async (request, response) => {
     return;
   }
 
-  if (requestUrl.pathname !== "/api/play") {
-    send(response, 404, "Not Found");
+  if (requestUrl.pathname === "/api/app-inspect") {
+    try {
+      const packageName = validatePackageName(requestUrl.searchParams.get("id"));
+      const country = validateCountry(requestUrl.searchParams.get("country"));
+      const data = await getAppInspection(packageName, country);
+      send(response, 200, JSON.stringify({ success: true, data }), { "content-type": "application/json; charset=utf-8" });
+    } catch (error) {
+      send(response, scraperClient ? 502 : 503, JSON.stringify({ success: false, error: error instanceof Error ? error.message : String(error) }), { "content-type": "application/json; charset=utf-8" });
+    }
     return;
   }
 
-  try {
-    const targetUrl = validatePlayUrl(requestUrl.searchParams.get("url") || "");
-    const upstream = await fetch(targetUrl, {
-      headers: {
-        accept: "text/html,application/xhtml+xml",
-        "accept-language": "en-US,en;q=0.9",
-        "user-agent": "GPChecker Local Proxy/1.0",
-      },
-    });
-    const body = await upstream.text();
-    send(response, upstream.status, body, {
-      "content-type": upstream.headers.get("content-type") || "text/plain; charset=utf-8",
-    });
-  } catch (error) {
-    send(response, 502, error instanceof Error ? error.message : String(error));
-  }
+  send(response, 404, "Not Found");
 });
 
 server.listen(port, host, () => {

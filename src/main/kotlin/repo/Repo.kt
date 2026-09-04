@@ -14,9 +14,6 @@ object Repo {
     )
     val mutex = Mutex()
 
-    val host = PersisValue.string("host", "127.0.0.1")
-    val port = PersisValue.int("port", 7890)
-
     fun add(data: AppStatus) {
         println("add: $data")
         launchScope {
